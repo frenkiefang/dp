@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>积分看板 — 每日积分追踪</title>
+
+    <!-- Fonts: Inter (UI) + JetBrains Mono (numbers) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
+
+    <!-- Supabase JS SDK (UMD build, pinned version for stability) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* ── Base ── */
+        :root {
+            --bg-primary: #09090B;
+            --bg-card: #18181B;
+            --border: #27272A;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --profit: #10B981;
+            --loss: #EF4444;
+            --sheet-transition: 350ms cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        body { scrollbar-width: none; }
+
+        /* ── Skeleton Pulse ── */
+        .skeleton {
+            background: linear-gradient(90deg, #18181B 25%, #27272A 50%, #18181B 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s ease-in-out infinite;
+            border-radius: 6px;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ── Bottom Sheet ── */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--sheet-transition);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .sheet-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sheet-panel {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%, 100%);
+            width: 100%;
+            max-width: 480px;
+            z-index: 51;
+            background: var(--bg-card);
+            border-radius: 20px 20px 0 0;
+            padding: 12px 20px 32px;
+            transition: transform var(--sheet-transition);
+            box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.5);
+        }
+        .sheet-panel.open {
+            transform: translate(-50%, 0);
+        }
+
+        .sheet-handle {
+            width: 36px;
+            height: 4px;
+            background: #3F3F46;
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+
+        /* ── Player Pill ── */
+        .player-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 200ms ease;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .player-pill:active {
+            transform: scale(0.96);
+        }
+        .player-pill.active {
+            background: #27272A;
+            color: var(--text-primary);
+            border-color: #3F3F46;
+        }
+        .player-pill.hidden-series {
+            opacity: 0.4;
+            text-decoration: line-through;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 4px;
+        }
+
+        .pill-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ── Toggle Buttons ── */
+        .mode-toggle {
+            display: inline-flex;
+            background: #18181B;
+            border-radius: 10px;
+            padding: 3px;
+            border: 1px solid var(--border);
+        }
+        .mode-toggle button {
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            transition: all 200ms ease;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .mode-toggle button.active {
+            background: #27272A;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* ── Leaderboard Row ── */
+        .lb-row {
+            display: grid;
+            grid-template-columns: 40px 1fr auto;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 150ms ease;
+        }
+        .lb-row:active {
+            background: #1F1F23;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            z-index: 100;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+            max-width: 380px;
+            width: 90%;
+            text-align: center;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.error {
+            background: #3B0A0A;
+            color: #FECACA;
+            border: 1px solid #7F1D1D;
+        }
+        .toast.success {
+            background: #0A2E1F;
+            color: #A7F3D0;
+            border: 1px solid #14532D;
+        }
+
+        /* ── Status Dot ── */
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online {
+            background: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+        }
+        .status-dot.offline {
+            background: #EF4444;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+        }
+
+        /* ── Number animation (subtle) ── */
+        .num-change {
+            animation: num-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes num-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
+        }
+
+        /* ── Chart container ── */
+        #chart {
+            min-height: 300px;
+        }
+        #chart .apexcharts-canvas {
+            /* ensure chart stays within bounds */
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+
+    <!-- ═══════════════ MAIN CONTAINER ═══════════════ -->
+    <main id="app" class="w-full max-w-md px-4 pt-4 pb-8">
+
+        <!-- ── Header Bar ── -->
+        <header class="flex items-center justify-between mb-5">
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-zinc-100">
+                    <i class="fa-solid fa-chart-line mr-2 text-zinc-500" style="font-size:15px;"></i>积分看板
+                </h1>
+                <p class="text-xs text-zinc-500 mt-0.5">
+                    每日积分追踪 ·
+                    <span id="update-date" class="text-zinc-600">加载中</span>
+                </p>
+            </div>
+            <div id="connection-indicator" class="flex items-center gap-2 text-xs text-zinc-500">
+                <span id="status-dot" class="status-dot offline"></span>
+                <span id="status-text">检测中</span>
+            </div>
+        </header>
+
+        <!-- ── Error Banner ── -->
+        <div id="error-banner" class="hidden mb-4 p-4 rounded-2xl bg-red-950/40 border border-red-900/60">
+            <div class="flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-red-400 mt-0.5"></i>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-red-300">数据库连接异常</p>
+                    <p id="error-message" class="text-xs text-red-400/70 mt-1"></p>
+                </div>
+                <button id="retry-btn" class="text-xs text-red-300 hover:text-red-200 underline shrink-0">
+                    重试
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Filter Bar ── -->
+        <div class="flex items-center gap-2 mb-4" id="filter-bar">
+            <!-- Year Select -->
+            <div class="relative flex-1">
+                <select id="year-select"
+                    class="w-full appearance-none bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 pr-8 text-sm text-zinc-200
+                           focus:outline-none focus:border-zinc-600 transition-colors">
+                    <option value="all">全部年份</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 text-xs pointer-events-none"></i>
+            </div>
+            <!-- Month Select -->
+            <div class="relative flex-1">
+                <select id="month-select"
+                    class="w-full appearance-none bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 pr-8 text-sm text-zinc-200
+                           focus:outline-none focus:border-zinc-600 transition-colors">
+                    <option value="all">全部月份</option>
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8">8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 text-xs pointer-events-none"></i>
+            </div>
+            <!-- Refresh -->
+            <button id="refresh-btn"
+                class="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-xl
+                       text-zinc-500 active:text-zinc-200 active:bg-zinc-800 transition-all">
+                <i class="fa-solid fa-rotate-right text-sm"></i>
+            </button>
+        </div>
+
+        <!-- ── Period Score Hero Card ── -->
+        <section class="mb-5">
+            <div id="hero-card" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
+                <!-- Subtle glow top-right -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-zinc-800/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+                <div class="relative">
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">
+                        <i class="fa-regular fa-calendar mr-1.5"></i>周期内积分
+                    </p>
+
+                    <!-- Skeleton -->
+                    <div id="hero-loading">
+                        <div class="skeleton h-8 w-32 mb-2"></div>
+                        <div class="skeleton h-12 w-40"></div>
+                    </div>
+
+                    <!-- Content -->
+                    <div id="hero-content" class="hidden">
+                        <p id="hero-player" class="text-xl font-semibold text-zinc-100 mb-1 truncate">—</p>
+                        <p id="hero-score" class="font-mono text-4xl font-bold tracking-tight">0分</p>
+                        <p id="hero-period" class="text-xs text-zinc-500 mt-2">全时段统计</p>
+                    </div>
+
+                    <!-- Empty -->
+                    <div id="hero-empty" class="hidden text-center py-4">
+                        <i class="fa-regular fa-circle-question text-2xl text-zinc-700 mb-2 block"></i>
+                        <p class="text-sm text-zinc-500">暂无数据</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Chart Section ── -->
+        <section class="mb-5">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <!-- Chart Header: Mode Toggle -->
+                <div class="flex items-center justify-between mb-4">
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest">
+                        <i class="fa-solid fa-chart-simple mr-1.5"></i>趋势
+                    </p>
+                    <div class="mode-toggle" id="mode-toggle">
+                        <button id="btn-cumulative" class="active" data-mode="cumulative">累积积分</button>
+                        <button id="btn-daily" data-mode="daily">单日积分</button>
+                    </div>
+                </div>
+
+                <!-- ApexCharts Container -->
+                <div id="chart" class="-mx-1">
+                    <!-- fallback skeleton shown while chart initializes -->
+                </div>
+
+                <!-- Player Pills -->
+                <div id="player-pills" class="flex flex-wrap gap-2 mt-3 pt-1 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <!-- dynamically populated -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Leaderboard ── -->
+        <section class="mb-6">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div class="px-4 py-3.5 border-b border-zinc-800 flex items-center justify-between">
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest">
+                        <i class="fa-solid fa-trophy mr-1.5"></i>龙虎榜
+                    </p>
+                    <span id="lb-count" class="text-xs text-zinc-600"></span>
+                </div>
+
+                <!-- Header row -->
+                <div class="lb-row text-xs text-zinc-600 uppercase tracking-wider" style="cursor:default;">
+                    <span class="text-center">#</span>
+                    <span>选手</span>
+                    <span class="text-right">积分</span>
+                </div>
+
+                <!-- Leaderboard list -->
+                <div id="leaderboard-list">
+                    <!-- Skeleton -->
+                    <div id="lb-loading" class="px-4 py-6 space-y-3">
+                        <div class="skeleton h-10 w-full"></div>
+                        <div class="skeleton h-10 w-full"></div>
+                        <div class="skeleton h-10 w-full"></div>
+                    </div>
+                    <!-- Empty -->
+                    <div id="lb-empty" class="hidden px-4 py-10 text-center">
+                        <i class="fa-regular fa-face-frown text-2xl text-zinc-700 mb-2 block"></i>
+                        <p class="text-sm text-zinc-500">暂无排行数据</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Footer ── -->
+        <footer class="text-center text-xs text-zinc-700 pb-4">
+            Powered by Supabase · 积分看板
+        </footer>
+    </main>
+
+    <!-- ═══════════════ BOTTOM SHEET OVERLAY ═══════════════ -->
+    <div id="sheet-overlay" class="sheet-overlay" onclick="closeBottomSheet()"></div>
+    <div id="sheet-panel" class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <div id="sheet-content">
+            <!-- dynamically populated -->
+        </div>
+    </div>
+
+    <!-- ═══════════════ TOAST ═══════════════ -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <script>
+    (function() {
+        // ──────────────────────────────────────────────
+        //  CONFIGURATION — 请填写你的 Supabase 凭据
+        // ──────────────────────────────────────────────
+        // 在 Supabase Dashboard → Settings → API 中找到以下信息：
+        const SUPABASE_URL = 'https://bpippqhzpfmdcuwfswfr.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Q2SQy1RS8vk5ek-rZJTCkA_qFcp1kl3';
+        const TABLE_NAME = 'dp_database';
+
+        // ──────────────────────────────────────────────
+        //  PLAYER COLOR PALETTE (8 distinct colors)
+        // ──────────────────────────────────────────────
+        const PLAYER_COLORS = [
+            '#A1A1AA', // zinc-400
+            '#60A5FA', // blue-400
+            '#34D399', // emerald-400
+            '#FBBF24', // amber-400
+            '#A78BFA', // violet-400
+            '#FB923C', // orange-400
+            '#F472B6', // pink-400
+            '#38BDF8', // sky-400
+        ];
+
+        // ──────────────────────────────────────────────
+        //  GLOBAL STATE
+        // ──────────────────────────────────────────────
+        let supabase = null;
+        let isConnected = false;
+        let allData = [];            // raw rows from Supabase
+        let filteredData = [];       // rows after year/month filter
+        let currentYear = 'all';
+        let currentMonth = 'all';
+        let chartMode = 'cumulative'; // 'cumulative' | 'daily'
+        let chart = null;
+        let playerColorMap = {};     // playerName → hex color
+        let visibleSeries = {};      // playerName → boolean
+
+        // ──────────────────────────────────────────────
+        //  DOM REFS
+        // ──────────────────────────────────────────────
+        const $ = (sel) => document.querySelector(sel);
+        const $$ = (sel) => document.querySelectorAll(sel);
+
+        const domStatusDot = $('#status-dot');
+        const domStatusText = $('#status-text');
+        const domErrorBanner = $('#error-banner');
+        const domErrorMessage = $('#error-message');
+        const domRetryBtn = $('#retry-btn');
+        const domYearSelect = $('#year-select');
+        const domMonthSelect = $('#month-select');
+        const domRefreshBtn = $('#refresh-btn');
+        const domHeroLoading = $('#hero-loading');
+        const domHeroContent = $('#hero-content');
+        const domHeroEmpty = $('#hero-empty');
+        const domHeroPlayer = $('#hero-player');
+        const domHeroScore = $('#hero-score');
+        const domHeroPeriod = $('#hero-period');
+        const domBtnCumulative = $('#btn-cumulative');
+        const domBtnDaily = $('#btn-daily');
+        const domPlayerPills = $('#player-pills');
+        const domLbLoading = $('#lb-loading');
+        const domLbEmpty = $('#lb-empty');
+        const domLbCount = $('#lb-count');
+        const domLeaderboardList = $('#leaderboard-list');
+        const domSheetOverlay = $('#sheet-overlay');
+        const domSheetPanel = $('#sheet-panel');
+        const domSheetContent = $('#sheet-content');
+        const domToast = $('#toast');
+        const domChart = $('#chart');
+        const domUpdateDate = $('#update-date');
+
+        // ──────────────────────────────────────────────
+        //  UTILITY FUNCTIONS
+        // ──────────────────────────────────────────────
+        function formatPoints(val) {
+            if (val === 0) return '0分';
+            const abs = Math.abs(val);
+            const formatted = abs >= 10000
+                ? (abs / 10000).toFixed(1) + 'w'
+                : abs.toLocaleString('zh-CN');
+            return val > 0 ? `+${formatted}分` : `-${formatted}分`;
+        }
+
+        function formatPointsShort(val) {
+            if (val === 0) return '0分';
+            const abs = Math.abs(val);
+            if (abs >= 10000) return (val > 0 ? '+' : '-') + (abs / 10000).toFixed(1) + 'w分';
+            return (val > 0 ? '+' : '-') + abs.toLocaleString('zh-CN') + '分';
+        }
+
+        function formatNumber(val) {
+            if (val >= 10000) return (val / 10000).toFixed(1) + 'w';
+            return val.toLocaleString('zh-CN');
+        }
+
+        function padRank(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function parseDateStr(str) {
+            // str format: "YYYY-MM-DD" or Date object
+            if (str instanceof Date) return str;
+            const d = new Date(str);
+            // adjust for timezone offset to keep local date
+            return new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+        }
+
+        function getDateKey(d) {
+            // YYYY-MM-DD
+            const dt = parseDateStr(d);
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const day = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        // ──────────────────────────────────────────────
+        //  TOAST
+        // ──────────────────────────────────────────────
+        let toastTimer = null;
+        function showToast(message, type = 'error') {
+            if (toastTimer) clearTimeout(toastTimer);
+            domToast.className = `toast ${type}`;
+            domToast.textContent = message;
+            // Force reflow
+            domToast.offsetHeight;
+            domToast.classList.add('show');
+            toastTimer = setTimeout(() => {
+                domToast.classList.remove('show');
+            }, 3500);
+        }
+
+        // ──────────────────────────────────────────────
+        //  CONNECTION INDICATOR
+        // ──────────────────────────────────────────────
+        function setConnectionStatus(online, message) {
+            isConnected = online;
+            domStatusDot.className = online ? 'status-dot online' : 'status-dot offline';
+            domStatusText.textContent = message || (online ? '已连接' : '离线');
+        }
+
+        // ──────────────────────────────────────────────
+        //  SUPABASE INIT & FETCH
+        // ──────────────────────────────────────────────
+        function initSupabase() {
+            if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                setConnectionStatus(false, '未配置');
+                showErrorBanner('请先在代码中填写 SUPABASE_URL 和 SUPABASE_ANON_KEY');
+                return false;
+            }
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return true;
+            } catch (e) {
+                console.error('Supabase init error:', e);
+                setConnectionStatus(false, '初始化失败');
+                showErrorBanner('Supabase 客户端初始化失败: ' + e.message);
+                return false;
+            }
+        }
+
+        function showErrorBanner(msg) {
+            domErrorBanner.classList.remove('hidden');
+            domErrorMessage.textContent = msg;
+        }
+
+        function hideErrorBanner() {
+            domErrorBanner.classList.add('hidden');
+        }
+
+        async function fetchData() {
+            if (!supabase) return null;
+
+            setConnectionStatus(false, '加载中...');
+            domStatusDot.className = 'status-dot offline';
+
+            try {
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('*')
+                    .order('play_date', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    setConnectionStatus(true, '已连接');
+                    allData = [];
+                    return [];
+                }
+
+                setConnectionStatus(true, '已连接');
+                hideErrorBanner();
+
+                // Normalize data
+                const normalized = data.map(row => ({
+                    id: row.id,
+                    player: String(row.player || '').trim(),
+                    value: parseFloat(row.value) || 0,
+                    play_date: row.play_date,
+                })).filter(row => row.player.length > 0);
+
+                allData = normalized;
+                return normalized;
+
+            } catch (e) {
+                console.error('Fetch error:', e);
+                setConnectionStatus(false, '连接异常');
+                showErrorBanner('数据库连接异常: ' + (e.message || '未知错误'));
+                showToast('数据加载失败，请检查网络连接', 'error');
+                allData = [];
+                return null;
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  DATA PROCESSING
+        // ──────────────────────────────────────────────
+        function filterByPeriod(data, year, month) {
+            return data.filter(row => {
+                const d = parseDateStr(row.play_date);
+                if (isNaN(d.getTime())) return false;
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const yearMatch = year === 'all' || String(y) === String(year);
+                const monthMatch = month === 'all' || String(m) === String(month);
+                return yearMatch && monthMatch;
+            });
+        }
+
+        function getUniqueYears(data) {
+            const years = new Set();
+            data.forEach(row => {
+                const d = parseDateStr(row.play_date);
+                if (!isNaN(d.getTime())) years.add(d.getFullYear());
+            });
+            return Array.from(years).sort((a, b) => b - a); // newest first
+        }
+
+        function getPlayerTotals(filteredRows) {
+            const totals = {};
+            filteredRows.forEach(row => {
+                if (!totals[row.player]) totals[row.player] = 0;
+                totals[row.player] += row.value;
+            });
+            return totals;
+        }
+
+        function getSortedPlayers(filteredRows) {
+            const totals = getPlayerTotals(filteredRows);
+            return Object.entries(totals)
+                .sort((a, b) => b[1] - a[1]) // descending
+                .map(([name, total]) => ({ name, total }));
+        }
+
+        function computeCumulativeSeries(filteredRows) {
+            // Group by date first, then compute running totals per player
+            const dateMap = {}; // dateKey → { player → sum }
+            filteredRows.forEach(row => {
+                const key = getDateKey(row.play_date);
+                if (!dateMap[key]) dateMap[key] = {};
+                if (!dateMap[key][row.player]) dateMap[key][row.player] = 0;
+                dateMap[key][row.player] += row.value;
+            });
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const players = new Set(filteredRows.map(r => r.player));
+            const runningTotals = {}; // player → running value
+            players.forEach(p => { runningTotals[p] = 0; });
+
+            const seriesMap = {}; // player → [{x, y}, ...]
+            players.forEach(p => { seriesMap[p] = []; });
+
+            sortedDates.forEach(dateKey => {
+                const dayData = dateMap[dateKey];
+                players.forEach(player => {
+                    if (dayData[player] !== undefined) {
+                        runningTotals[player] += dayData[player];
+                    }
+                    seriesMap[player].push({
+                        x: new Date(dateKey + 'T00:00:00').getTime(),
+                        y: runningTotals[player],
+                    });
+                });
+            });
+
+            return seriesMap;
+        }
+
+        function computeDailySeries(filteredRows) {
+            // Group by date, sum per player per day
+            const dateMap = {}; // dateKey → { player → sum }
+            filteredRows.forEach(row => {
+                const key = getDateKey(row.play_date);
+                if (!dateMap[key]) dateMap[key] = {};
+                if (!dateMap[key][row.player]) dateMap[key][row.player] = 0;
+                dateMap[key][row.player] += row.value;
+            });
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const players = new Set(filteredRows.map(r => r.player));
+            const seriesMap = {}; // player → [{x, y}, ...]
+            players.forEach(p => { seriesMap[p] = []; });
+
+            sortedDates.forEach(dateKey => {
+                const dayData = dateMap[dateKey];
+                const ts = new Date(dateKey + 'T00:00:00').getTime();
+                players.forEach(player => {
+                    seriesMap[player].push({
+                        x: ts,
+                        y: dayData[player] !== undefined ? dayData[player] : null,
+                    });
+                });
+            });
+
+            return seriesMap;
+        }
+
+        function assignPlayerColors(players) {
+            const map = {};
+            players.forEach((p, i) => {
+                if (playerColorMap[p]) {
+                    map[p] = playerColorMap[p];
+                } else {
+                    map[p] = PLAYER_COLORS[i % PLAYER_COLORS.length];
+                }
+            });
+            playerColorMap = map;
+            return map;
+        }
+
+        // ──────────────────────────────────────────────
+        //  RENDER: Hero Card
+        // ──────────────────────────────────────────────
+        function renderHeroCard() {
+            const sorted = getSortedPlayers(filteredData);
+
+            if (sorted.length === 0) {
+                domHeroLoading.classList.add('hidden');
+                domHeroContent.classList.add('hidden');
+                domHeroEmpty.classList.remove('hidden');
+                return;
+            }
+
+            const topPlayer = sorted[0];
+
+            domHeroLoading.classList.add('hidden');
+            domHeroEmpty.classList.add('hidden');
+            domHeroContent.classList.remove('hidden');
+
+            domHeroPlayer.textContent = topPlayer.name;
+            domHeroScore.textContent = formatPoints(topPlayer.total);
+            // Re-trigger num-change animation
+            domHeroScore.classList.remove('num-change');
+            void domHeroScore.offsetWidth; // force reflow
+            domHeroScore.className = 'font-mono text-4xl font-bold tracking-tight num-change ' +
+                (topPlayer.total >= 0 ? 'text-emerald-400' : 'text-red-400');
+
+            // Period label
+            const yearText = currentYear === 'all' ? '' : currentYear + '年';
+            const monthText = currentMonth === 'all' ? '' : currentMonth + '月';
+            domHeroPeriod.textContent = yearText + monthText || '全时段统计';
+        }
+
+        // ──────────────────────────────────────────────
+        //  RENDER: Chart
+        // ──────────────────────────────────────────────
+        function getChartSeriesData() {
+            if (filteredData.length === 0) return [];
+
+            const seriesMap = chartMode === 'cumulative'
+                ? computeCumulativeSeries(filteredData)
+                : computeDailySeries(filteredData);
+
+            const players = Object.keys(seriesMap);
+            assignPlayerColors(players);
+
+            return players.map(player => ({
+                name: player,
+                data: seriesMap[player],
+                color: playerColorMap[player],
+            }));
+        }
+
+        function createChart() {
+            const options = {
+                chart: {
+                    type: 'line',
+                    height: 300,
+                    background: 'transparent',
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 600,
+                        animateGradually: { enabled: true, delay: 80 },
+                    },
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    events: {
+                        legendClick: function(chartContext, seriesIndex, config) {
+                            // We handle toggling via pills instead
+                            config.shouldUpdate = false;
+                        }
+                    }
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2,
+                },
+                markers: {
+                    size: 0,
+                    strokeWidth: 0,
+                    hover: { size: 7, sizeOffset: 0 },
+                },
+                grid: {
+                    borderColor: '#27272A',
+                    strokeDashArray: 4,
+                    xaxis: { lines: { show: false } },
+                    yaxis: { lines: { show: true } },
+                    padding: { top: 8, right: 8, bottom: 8, left: 8 },
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Inter, sans-serif' },
+                        format: 'yyyy/MM/dd',
+                        rotate: 0,
+                        hideOverlappingLabels: true,
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    tooltip: { enabled: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'JetBrains Mono, monospace' },
+                        formatter: (val) => {
+                            if (Math.abs(val) >= 10000) return (val / 10000).toFixed(1) + 'w';
+                            return val + '分';
+                        },
+                    },
+                    forceNiceScale: true,
+                },
+                tooltip: {
+                    theme: 'dark',
+                    shared: true,
+                    intersect: false,
+                    x: { format: 'yyyy/MM/dd' },
+                    y: {
+                        formatter: (val) => formatPoints(val),
+                        title: { formatter: (seriesName) => seriesName + ': ' },
+                    },
+                    marker: { show: true, strokeWidth: 0 },
+                    style: { fontSize: '13px', fontFamily: 'Inter, sans-serif' },
+                },
+                legend: { show: false },
+                series: [],
+            };
+
+            chart = new ApexCharts(domChart, options);
+            chart.render();
+        }
+
+        function updateChart() {
+            if (!chart) return;
+
+            const seriesData = getChartSeriesData();
+
+            if (seriesData.length === 0) {
+                chart.updateSeries([]);
+                updatePlayerPills([]);
+                return;
+            }
+
+            chart.updateSeries(seriesData);
+
+            // Restore visibility state
+            seriesData.forEach(s => {
+                const name = s.name;
+                if (visibleSeries[name] === false) {
+                    chart.hideSeries(name);
+                }
+                if (visibleSeries[name] === undefined) {
+                    visibleSeries[name] = true;
+                }
+            });
+
+            // Re-render with updated data (keep y-axis clean)
+            chart.updateOptions({
+                yaxis: {
+                    title: { text: undefined },
+                },
+            }, false, true);
+
+            updatePlayerPills(seriesData.map(s => s.name));
+        }
+
+        function destroyChart() {
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            visibleSeries = {};
+        }
+
+        // ──────────────────────────────────────────────
+        //  RENDER: Player Pills
+        // ──────────────────────────────────────────────
+        function updatePlayerPills(players) {
+            if (players.length === 0) {
+                domPlayerPills.innerHTML = '<span class="text-xs text-zinc-600">暂无选手</span>';
+                return;
+            }
+
+            domPlayerPills.innerHTML = players.map(player => {
+                const color = playerColorMap[player] || '#71717A';
+                const isHidden = visibleSeries[player] === false;
+                const activeClass = isHidden ? 'hidden-series' : 'active';
+                return `
+                    <span class="player-pill ${activeClass}" data-player="${escapeHtml(player)}" onclick="window.__togglePlayer('${escapeJs(player)}')">
+                        <span class="pill-dot" style="background:${color};"></span>
+                        ${escapeHtml(player)}
+                    </span>
+                `;
+            }).join('');
+        }
+
+        function togglePlayerSeries(playerName) {
+            if (!chart) return;
+            if (visibleSeries[playerName] === undefined) {
+                visibleSeries[playerName] = true;
+            }
+
+            if (visibleSeries[playerName]) {
+                chart.hideSeries(playerName);
+                visibleSeries[playerName] = false;
+            } else {
+                chart.showSeries(playerName);
+                visibleSeries[playerName] = true;
+            }
+
+            // Update pill DOM
+            const pill = document.querySelector(`.player-pill[data-player="${escapeHtml(playerName)}"]`);
+            if (pill) {
+                if (visibleSeries[playerName]) {
+                    pill.classList.remove('hidden-series');
+                    pill.classList.add('active');
+                } else {
+                    pill.classList.remove('active');
+                    pill.classList.add('hidden-series');
+                }
+            }
+        }
+
+        // Expose globally for onclick
+        window.__togglePlayer = togglePlayerSeries;
+
+        // ──────────────────────────────────────────────
+        //  RENDER: Leaderboard
+        // ──────────────────────────────────────────────
+        function renderLeaderboard() {
+            domLbLoading.classList.add('hidden');
+            domLbEmpty.classList.add('hidden');
+
+            const sorted = getSortedPlayers(filteredData);
+
+            if (sorted.length === 0) {
+                domLbEmpty.classList.remove('hidden');
+                domLbCount.textContent = '';
+                // Remove existing rows
+                const existingRows = domLeaderboardList.querySelectorAll('.lb-row.dynamic');
+                existingRows.forEach(r => r.remove());
+                return;
+            }
+
+            domLbCount.textContent = `${sorted.length} 位选手`;
+
+            // Remove existing dynamic rows (keep loading/empty placeholders)
+            const existingRows = domLeaderboardList.querySelectorAll('.lb-row.dynamic');
+            existingRows.forEach(r => r.remove());
+
+            // Insert after the header row
+            const headerRow = domLeaderboardList.querySelector('.lb-row');
+            const fragment = document.createDocumentFragment();
+
+            sorted.forEach((player, index) => {
+                const row = document.createElement('div');
+                row.className = 'lb-row dynamic border-b border-zinc-800/50';
+                row.onclick = () => openBottomSheet(player.name, player.total);
+                row.innerHTML = `
+                    <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
+                    <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)}</span>
+                    <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        ${formatPoints(player.total)}
+                    </span>
+                `;
+                fragment.appendChild(row);
+            });
+
+            domLeaderboardList.appendChild(fragment);
+        }
+
+        // ──────────────────────────────────────────────
+        //  BOTTOM SHEET
+        // ──────────────────────────────────────────────
+        function openBottomSheet(playerName, totalScore) {
+            // Compute detailed stats for this player in filtered period
+            const playerRows = filteredData.filter(r => r.player === playerName);
+
+            // Group by date to get "game days"
+            const dayValues = {};
+            playerRows.forEach(r => {
+                const key = getDateKey(r.play_date);
+                if (!dayValues[key]) dayValues[key] = 0;
+                dayValues[key] += r.value;
+            });
+
+            const days = Object.entries(dayValues);
+            const gameDays = days.length;
+            const winningDays = days.filter(([, v]) => v > 0).length;
+            const winRate = gameDays > 0 ? Math.round((winningDays / gameDays) * 100) : 0;
+            const bestDay = days.length > 0 ? Math.max(...days.map(([, v]) => v)) : 0;
+            const worstDay = days.length > 0 ? Math.min(...days.map(([, v]) => v)) : 0;
+            const avgPerDay = gameDays > 0 ? Math.round(totalScore / gameDays) : 0;
+
+            // Color for the player
+            const color = playerColorMap[playerName] || '#71717A';
+
+            domSheetContent.innerHTML = `
+                <div class="text-center mb-5">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-3"
+                         style="background:${color}20; border: 2px solid ${color}40;">
+                        <span class="text-xl font-bold" style="color:${color}">${escapeHtml(playerName.charAt(0))}</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-zinc-100">${escapeHtml(playerName)}</h3>
+                    <p class="text-3xl font-mono font-bold mt-2 tracking-tight ${totalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        ${formatPoints(totalScore)}
+                    </p>
+                    <p class="text-xs text-zinc-500 mt-1">周期总积分</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-zinc-200">${gameDays}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">总场次</p>
+                    </div>
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-zinc-200">${winRate}%</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">胜率</p>
+                    </div>
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-zinc-200">${formatPointsShort(avgPerDay)}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">日均</p>
+                    </div>
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-emerald-400">${formatPointsShort(bestDay)}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">最佳单日</p>
+                    </div>
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-red-400">${formatPointsShort(worstDay)}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">最差单日</p>
+                    </div>
+                    <div class="bg-zinc-950 rounded-xl p-3 text-center">
+                        <p class="font-mono text-lg font-semibold text-zinc-200">${winningDays}/${gameDays}</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">胜/总</p>
+                    </div>
+                </div>
+
+                <button onclick="closeBottomSheet()"
+                    class="w-full mt-5 py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-700 text-zinc-300
+                           rounded-xl text-sm font-medium transition-colors">
+                    关闭
+                </button>
+            `;
+
+            // Open
+            domSheetOverlay.classList.add('open');
+            domSheetPanel.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeBottomSheet() {
+            domSheetOverlay.classList.remove('open');
+            domSheetPanel.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // Expose globally for onclick handlers
+        window.closeBottomSheet = closeBottomSheet;
+
+        // ──────────────────────────────────────────────
+        //  FILTER HANDLERS
+        // ──────────────────────────────────────────────
+        function populateYearDropdown() {
+            const years = getUniqueYears(allData);
+            const currentVal = domYearSelect.value;
+
+            domYearSelect.innerHTML = '<option value="all">全部年份</option>';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y + '年';
+                domYearSelect.appendChild(opt);
+            });
+
+            // Restore value if still valid
+            if (currentVal === 'all' || years.includes(parseInt(currentVal))) {
+                domYearSelect.value = currentVal;
+            } else if (years.length > 0) {
+                domYearSelect.value = 'all';
+            }
+        }
+
+        function applyFilters() {
+            currentYear = domYearSelect.value;
+            currentMonth = domMonthSelect.value;
+            filteredData = filterByPeriod(allData, currentYear, currentMonth);
+            refreshUI();
+        }
+
+        function refreshUI() {
+            updateLatestDateDisplay();
+            renderHeroCard();
+            updateChart();
+            renderLeaderboard();
+        }
+
+        function updateLatestDateDisplay() {
+            if (allData.length === 0) {
+                domUpdateDate.textContent = '暂无数据';
+                domUpdateDate.className = 'text-zinc-600';
+                return;
+            }
+            const latestDate = allData.reduce((max, row) => {
+                const d = parseDateStr(row.play_date);
+                return (!max || d > max) ? d : max;
+            }, null);
+            if (latestDate) {
+                const y = latestDate.getFullYear();
+                const m = String(latestDate.getMonth() + 1).padStart(2, '0');
+                const day = String(latestDate.getDate()).padStart(2, '0');
+                domUpdateDate.textContent = `更新至 ${y}/${m}/${day}`;
+                domUpdateDate.className = 'text-zinc-500';
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  EVENT LISTENERS
+        // ──────────────────────────────────────────────
+        domYearSelect.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        domMonthSelect.addEventListener('change', () => {
+            applyFilters();
+        });
+
+        domRefreshBtn.addEventListener('click', async () => {
+            domRefreshBtn.classList.add('animate-spin');
+            domRefreshBtn.disabled = true;
+            await fetchData();
+            if (allData.length > 0) {
+                populateYearDropdown();
+                applyFilters();
+            } else if (isConnected) {
+                // Connected but empty data
+                filteredData = [];
+                refreshUI();
+            }
+            domRefreshBtn.classList.remove('animate-spin');
+            domRefreshBtn.disabled = false;
+            if (isConnected) {
+                showToast('数据刷新成功', 'success');
+            }
+        });
+
+        domRetryBtn.addEventListener('click', async () => {
+            await fetchData();
+            if (allData.length > 0) {
+                populateYearDropdown();
+                applyFilters();
+            } else if (isConnected) {
+                filteredData = [];
+                refreshUI();
+            }
+        });
+
+        domBtnCumulative.addEventListener('click', () => {
+            if (chartMode === 'cumulative') return;
+            chartMode = 'cumulative';
+            domBtnCumulative.classList.add('active');
+            domBtnDaily.classList.remove('active');
+            // Keep visibility state but update data
+            updateChartKeepVisibility();
+        });
+
+        domBtnDaily.addEventListener('click', () => {
+            if (chartMode === 'daily') return;
+            chartMode = 'daily';
+            domBtnDaily.classList.add('active');
+            domBtnCumulative.classList.remove('active');
+            updateChartKeepVisibility();
+        });
+
+        function updateChartKeepVisibility() {
+            if (!chart) return;
+            const seriesData = getChartSeriesData();
+            if (seriesData.length === 0) {
+                chart.updateSeries([]);
+                updatePlayerPills([]);
+                return;
+            }
+
+            chart.updateSeries(seriesData);
+
+            // Re-apply visibility
+            seriesData.forEach(s => {
+                if (visibleSeries[s.name] === undefined) {
+                    visibleSeries[s.name] = true;
+                }
+                if (visibleSeries[s.name] === false) {
+                    chart.hideSeries(s.name);
+                }
+            });
+
+            updatePlayerPills(seriesData.map(s => s.name));
+        }
+
+        // Close bottom sheet on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeBottomSheet();
+            }
+        });
+
+        // Touch swipe handling for bottom sheet (basic)
+        let touchStartY = 0;
+        domSheetPanel.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        domSheetPanel.addEventListener('touchmove', (e) => {
+            const deltaY = e.touches[0].clientY - touchStartY;
+            if (deltaY > 60) {
+                closeBottomSheet();
+            }
+        }, { passive: true });
+
+        // ──────────────────────────────────────────────
+        //  INITIALIZATION
+        // ──────────────────────────────────────────────
+        async function init() {
+            // Show loading states
+            domHeroLoading.classList.remove('hidden');
+            domHeroContent.classList.add('hidden');
+            domHeroEmpty.classList.add('hidden');
+            domLbLoading.classList.remove('hidden');
+
+            // Init Supabase
+            const configured = initSupabase();
+
+            if (!configured) {
+                // No config - show empty state
+                domHeroLoading.classList.add('hidden');
+                domHeroEmpty.classList.remove('hidden');
+                domLbLoading.classList.add('hidden');
+                domLbEmpty.classList.remove('hidden');
+                createChart(); // empty chart
+                updatePlayerPills([]);
+                return;
+            }
+
+            // Create empty chart immediately
+            createChart();
+            updatePlayerPills([]);
+
+            // Fetch data
+            await fetchData();
+
+            if (allData.length > 0) {
+                populateYearDropdown();
+                // Default: show all data
+                domYearSelect.value = 'all';
+                domMonthSelect.value = 'all';
+                currentYear = 'all';
+                currentMonth = 'all';
+                filteredData = [...allData];
+                refreshUI();
+            } else if (isConnected) {
+                // Connected but empty table
+                currentYear = 'all';
+                currentMonth = 'all';
+                filteredData = [];
+                refreshUI();
+                domHeroLoading.classList.add('hidden');
+                domHeroEmpty.classList.remove('hidden');
+                domLbLoading.classList.add('hidden');
+                domLbEmpty.classList.remove('hidden');
+            } else {
+                // Connection error
+                currentYear = 'all';
+                currentMonth = 'all';
+                filteredData = [];
+                refreshUI();
+                domHeroLoading.classList.add('hidden');
+                domHeroEmpty.classList.remove('hidden');
+                domLbLoading.classList.add('hidden');
+                domLbEmpty.classList.remove('hidden');
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  HTML ESCAPE UTILS
+        // ──────────────────────────────────────────────
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function escapeJs(str) {
+            return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        // ──────────────────────────────────────────────
+        //  START
+        // ──────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Expose for debugging
+        window.__scoreApp = {
+            allData,
+            filteredData,
+            chart,
+            refreshUI,
+            fetchData,
+            getPlayerTotals,
+            getSortedPlayers,
+        };
+    })();
+    </script>
+</body>
+</html>
