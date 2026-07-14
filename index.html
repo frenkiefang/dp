@@ -264,8 +264,16 @@
         #chart {
             min-height: 300px;
         }
-        #chart .apexcharts-canvas {
-            /* ensure chart stays within bounds */
+        /* Override ApexCharts default tooltip wrapper — remove white border */
+        .apexcharts-tooltip {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .apexcharts-tooltip.apexcharts-theme-dark {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
         }
     </style>
 </head>
@@ -893,13 +901,17 @@
                         hideOverlappingLabels: true,
                         formatter: (val) => {
                             const idx = Math.round(val);
-                            if (idx >= 0 && idx < chartDates.length) {
-                                const d = chartDates[idx];
-                                // show as MM/dd
-                                const parts = d.split('-');
-                                return parts[1] + '/' + parts[2];
+                            if (idx < 0 || idx >= chartDates.length) return '';
+                            const d = chartDates[idx];
+                            const parts = d.split('-');
+                            const month = parseInt(parts[1], 10);
+                            const day = parts[2];
+                            // show month label at month transitions
+                            const prevMonth = idx > 0 ? parseInt(chartDates[idx-1].split('-')[1], 10) : null;
+                            if (prevMonth === null || prevMonth !== month) {
+                                return month + '月' + day + '日';
                             }
-                            return '';
+                            return day + '日';
                         },
                     },
                     axisBorder: { show: false },
@@ -918,21 +930,44 @@
                     forceNiceScale: true,
                 },
                 tooltip: {
-                    theme: 'dark',
                     shared: true,
                     intersect: false,
-                    x: {
-                        formatter: (val) => {
-                            const idx = Math.round(val);
-                            return idx >= 0 && idx < chartDates.length ? chartDates[idx] : '';
-                        },
+                    custom: function({ seriesIndex, dataPointIndex, w }) {
+                        if (dataPointIndex == null || dataPointIndex < 0) return '';
+                        const dateIdx = Math.round(w.globals.seriesX[0][dataPointIndex]);
+                        const dateStr = (dateIdx >= 0 && dateIdx < chartDates.length) ? chartDates[dateIdx] : '';
+
+                        // collect all visible series values at this point
+                        const items = [];
+                        w.globals.series.forEach((s, i) => {
+                            const val = s[dataPointIndex];
+                            if (val !== null && val !== undefined && w.globals.seriesNames[i]) {
+                                items.push({
+                                    name: w.globals.seriesNames[i],
+                                    value: val,
+                                    color: w.globals.colors[i],
+                                });
+                            }
+                        });
+                        if (items.length === 0) return '';
+
+                        // sort descending by value
+                        items.sort((a, b) => b.value - a.value);
+
+                        let html = '<div style="background:rgba(24,24,27,0.95);border-radius:12px;padding:10px 14px;font-family:Inter,sans-serif;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">';
+                        html += '<div style="color:#A1A1AA;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(63,63,70,0.5);">' + dateStr + '</div>';
+                        items.forEach(item => {
+                            const colorClass = item.value >= 0 ? '#10B981' : '#EF4444';
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;gap:16px;">';
+                            html += '<span style="display:flex;align-items:center;gap:6px;color:#A1A1AA;font-size:12px;">';
+                            html += '<span style="width:8px;height:8px;border-radius:50%;background:' + item.color + ';display:inline-block;flex-shrink:0;"></span>';
+                            html += item.name + '</span>';
+                            html += '<span style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;color:' + colorClass + ';">' + formatPoints(item.value) + '</span>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        return html;
                     },
-                    y: {
-                        formatter: (val) => formatPoints(val),
-                        title: { formatter: (seriesName) => seriesName + ': ' },
-                    },
-                    marker: { show: true, strokeWidth: 0 },
-                    style: { fontSize: '13px', fontFamily: 'Inter, sans-serif' },
                 },
                 legend: { show: false },
                 series: [],
