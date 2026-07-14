@@ -494,6 +494,7 @@
         let chart = null;
         let playerColorMap = {};     // playerName → hex color
         let visibleSeries = {};      // playerName → boolean
+        let chartDates = [];         // sorted unique dates for current chart (for label formatting)
 
         // ──────────────────────────────────────────────
         //  DOM REFS
@@ -730,20 +731,20 @@
             const seriesMap = {}; // player → [{x, y}, ...]
             players.forEach(p => { seriesMap[p] = []; });
 
-            sortedDates.forEach(dateKey => {
+            sortedDates.forEach((dateKey, dateIndex) => {
                 const dayData = dateMap[dateKey];
                 players.forEach(player => {
                     if (dayData[player] !== undefined) {
                         runningTotals[player] += dayData[player];
                     }
                     seriesMap[player].push({
-                        x: new Date(dateKey + 'T00:00:00').getTime(),
+                        x: dateIndex,
                         y: runningTotals[player],
                     });
                 });
             });
 
-            return seriesMap;
+            return { seriesMap, sortedDates };
         }
 
         function computeDailySeries(filteredRows) {
@@ -761,18 +762,17 @@
             const seriesMap = {}; // player → [{x, y}, ...]
             players.forEach(p => { seriesMap[p] = []; });
 
-            sortedDates.forEach(dateKey => {
+            sortedDates.forEach((dateKey, dateIndex) => {
                 const dayData = dateMap[dateKey];
-                const ts = new Date(dateKey + 'T00:00:00').getTime();
                 players.forEach(player => {
                     seriesMap[player].push({
-                        x: ts,
+                        x: dateIndex,
                         y: dayData[player] !== undefined ? dayData[player] : null,
                     });
                 });
             });
 
-            return seriesMap;
+            return { seriesMap, sortedDates };
         }
 
         function assignPlayerColors(players) {
@@ -827,9 +827,12 @@
         function getChartSeriesData() {
             if (filteredData.length === 0) return [];
 
-            const seriesMap = chartMode === 'cumulative'
+            const result = chartMode === 'cumulative'
                 ? computeCumulativeSeries(filteredData)
                 : computeDailySeries(filteredData);
+
+            const { seriesMap, sortedDates } = result;
+            chartDates = sortedDates; // store for xaxis label formatter
 
             const players = Object.keys(seriesMap);
             assignPlayerColors(players);
@@ -880,16 +883,29 @@
                     padding: { top: 8, right: 8, bottom: 8, left: 8 },
                 },
                 xaxis: {
-                    type: 'datetime',
+                    type: 'numeric',
+                    min: -0.6,
+                    max: 0.6,
+                    tickAmount: 0,
                     labels: {
                         style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Inter, sans-serif' },
-                        format: 'yyyy/MM/dd',
                         rotate: 0,
                         hideOverlappingLabels: true,
+                        formatter: (val) => {
+                            const idx = Math.round(val);
+                            if (idx >= 0 && idx < chartDates.length) {
+                                const d = chartDates[idx];
+                                // show as MM/dd
+                                const parts = d.split('-');
+                                return parts[1] + '/' + parts[2];
+                            }
+                            return '';
+                        },
                     },
                     axisBorder: { show: false },
                     axisTicks: { show: false },
                     tooltip: { enabled: false },
+                    crosshairs: { show: true, stroke: { color: '#3F3F46', width: 1, dashArray: 0 } },
                 },
                 yaxis: {
                     labels: {
@@ -905,7 +921,12 @@
                     theme: 'dark',
                     shared: true,
                     intersect: false,
-                    x: { format: 'yyyy/MM/dd' },
+                    x: {
+                        formatter: (val) => {
+                            const idx = Math.round(val);
+                            return idx >= 0 && idx < chartDates.length ? chartDates[idx] : '';
+                        },
+                    },
                     y: {
                         formatter: (val) => formatPoints(val),
                         title: { formatter: (seriesName) => seriesName + ': ' },
@@ -945,8 +966,13 @@
                 }
             });
 
-            // Re-render with updated data (keep y-axis clean)
+            // Update xaxis range with padding on both edges
+            const lastIdx = chartDates.length > 0 ? chartDates.length - 1 : 0;
             chart.updateOptions({
+                xaxis: {
+                    min: -0.65,
+                    max: lastIdx + 0.65,
+                },
                 yaxis: {
                     title: { text: undefined },
                 },
@@ -1282,6 +1308,15 @@
                     chart.hideSeries(s.name);
                 }
             });
+
+            // Update xaxis range with padding
+            const lastIdx = chartDates.length > 0 ? chartDates.length - 1 : 0;
+            chart.updateOptions({
+                xaxis: {
+                    min: -0.65,
+                    max: lastIdx + 0.65,
+                },
+            }, false, true);
 
             updatePlayerPills(seriesData.map(s => s.name));
         }
