@@ -316,6 +316,40 @@
             </div>
         </div>
 
+        <!-- ── Latest Play Date Board ── -->
+        <section class="mb-5" id="latest-board-section">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div class="px-4 py-3.5 border-b border-zinc-800 flex items-center justify-between">
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest">
+                        <i class="fa-solid fa-calendar-day mr-1.5"></i>最新战绩
+                    </p>
+                    <span id="latest-date-label" class="text-xs text-zinc-500 font-mono"></span>
+                </div>
+
+                <!-- Header row -->
+                <div class="lb-row text-xs text-zinc-600 uppercase tracking-wider" style="cursor:default;">
+                    <span class="text-center">排名</span>
+                    <span>选手</span>
+                    <span class="text-right">价值</span>
+                </div>
+
+                <!-- Content -->
+                <div id="latest-board-content">
+                    <!-- Skeleton -->
+                    <div id="latest-loading" class="px-4 py-6 space-y-3">
+                        <div class="skeleton h-10 w-full"></div>
+                        <div class="skeleton h-10 w-full"></div>
+                        <div class="skeleton h-10 w-full"></div>
+                    </div>
+                    <!-- Empty -->
+                    <div id="latest-empty" class="hidden px-4 py-8 text-center">
+                        <i class="fa-regular fa-calendar-xmark text-2xl text-zinc-700 mb-2 block"></i>
+                        <p class="text-sm text-zinc-500">暂无战绩数据</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ── Filter Bar ── -->
         <div class="flex items-center gap-2 mb-4" id="filter-bar">
             <!-- Year Select -->
@@ -540,6 +574,9 @@
         const domToast = $('#toast');
         const domChart = $('#chart');
         const domUpdateDate = $('#update-date');
+        const domLatestLoading = $('#latest-loading');
+        const domLatestEmpty = $('#latest-empty');
+        const domLatestDateLabel = $('#latest-date-label');
 
         // ──────────────────────────────────────────────
         //  UTILITY FUNCTIONS
@@ -1080,6 +1117,83 @@
         window.__togglePlayer = togglePlayerSeries;
 
         // ──────────────────────────────────────────────
+        //  RENDER: Latest Play Date Board
+        // ──────────────────────────────────────────────
+        function renderLatestBoard() {
+            domLatestLoading.classList.add('hidden');
+            domLatestEmpty.classList.add('hidden');
+
+            if (allData.length === 0) {
+                domLatestEmpty.classList.remove('hidden');
+                domLatestDateLabel.textContent = '';
+                // Remove existing dynamic rows
+                const existingRows = document.querySelectorAll('#latest-board-content .lb-row.dynamic');
+                existingRows.forEach(r => r.remove());
+                return;
+            }
+
+            // Find the latest play_date across all data
+            const latestDate = allData.reduce((max, row) => {
+                const d = parseDateStr(row.play_date);
+                return (!max || d > max) ? d : max;
+            }, null);
+
+            if (!latestDate) {
+                domLatestEmpty.classList.remove('hidden');
+                domLatestDateLabel.textContent = '';
+                return;
+            }
+
+            const latestDateKey = getDateKey(latestDate);
+            domLatestDateLabel.textContent = latestDateKey;
+
+            // Get all records for the latest date
+            const latestRecords = allData.filter(r => getDateKey(r.play_date) === latestDateKey);
+
+            if (latestRecords.length === 0) {
+                domLatestEmpty.classList.remove('hidden');
+                return;
+            }
+
+            // Aggregate by player (in case of multiple entries same day)
+            const playerValues = {};
+            latestRecords.forEach(r => {
+                if (!playerValues[r.player]) playerValues[r.player] = 0;
+                playerValues[r.player] += r.value;
+            });
+
+            // Sort by value descending
+            const sorted = Object.entries(playerValues)
+                .map(([name, total]) => ({ name, total }))
+                .sort((a, b) => b.total - a.total);
+
+            // Remove existing dynamic rows
+            const existingRows = document.querySelectorAll('#latest-board-content .lb-row.dynamic');
+            existingRows.forEach(r => r.remove());
+
+            // Insert after the header row
+            const headerRow = document.querySelector('#latest-board-content .lb-row');
+            const fragment = document.createDocumentFragment();
+
+            sorted.forEach((player, index) => {
+                const row = document.createElement('div');
+                row.className = 'lb-row dynamic border-b border-zinc-800/50';
+                // No click handler for this board — it's display-only
+                row.innerHTML = `
+                    <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
+                    <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)}</span>
+                    <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        ${player.total >= 0 ? '+' : ''}${player.total}分
+                    </span>
+                `;
+                fragment.appendChild(row);
+            });
+
+            const latestBoardContent = document.getElementById('latest-board-content');
+            latestBoardContent.appendChild(fragment);
+        }
+
+        // ──────────────────────────────────────────────
         //  RENDER: Leaderboard
         // ──────────────────────────────────────────────
         function renderLeaderboard() {
@@ -1244,6 +1358,7 @@
 
         function refreshUI() {
             updateLatestDateDisplay();
+            renderLatestBoard();
             renderHeroCard();
             updateChart();
             renderLeaderboard();

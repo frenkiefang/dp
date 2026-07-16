@@ -56,19 +56,6 @@
         .toast.show { transform: translateX(-50%) translateY(0); }
         .toast.success { background: #0A2E1F; color: #A7F3D0; border: 1px solid #14532D; }
         .toast.error { background: #3B0A0A; color: #FECACA; border: 1px solid #7F1D1D; }
-
-        .dialog-overlay {
-            position: fixed; inset: 0; z-index: 60;
-            background: rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none;
-            transition: opacity 200ms ease;
-        }
-        .dialog-overlay.open { opacity: 1; pointer-events: auto; }
-        .dialog-box {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center;
-        }
     </style>
 </head>
 <body class="flex justify-center min-h-screen">
@@ -147,6 +134,11 @@
 
                     <div id="player-rows" class="space-y-2 mb-3"></div>
 
+                    <div id="total-display" class="flex items-center justify-between bg-zinc-800/40 rounded-xl px-4 py-2.5 mb-3">
+                        <span class="text-xs text-zinc-400"><i class="fa-solid fa-calculator mr-1.5"></i>选手积分合计</span>
+                        <span id="total-value" class="font-mono text-sm font-semibold text-zinc-200">0分</span>
+                    </div>
+
                     <button id="add-player-btn"
                         class="w-full py-2.5 border border-dashed border-zinc-700 rounded-xl text-xs text-zinc-500
                                hover:text-zinc-300 hover:border-zinc-500 active:bg-zinc-800 transition-all mb-4">
@@ -190,18 +182,6 @@
         </div>
     </main>
 
-    <!-- Confirm Dialog -->
-    <div id="confirm-dialog" class="dialog-overlay">
-        <div class="dialog-box">
-            <p class="text-sm text-zinc-200 mb-2 font-medium">确认删除</p>
-            <p id="confirm-msg" class="text-xs text-zinc-400 mb-5"></p>
-            <div class="flex gap-3">
-                <button id="confirm-cancel" class="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-medium transition-colors">取消</button>
-                <button id="confirm-ok" class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition-colors">删除</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
@@ -215,7 +195,6 @@
         // ── STATE ──
         let supabase = null;
         let allRecords = [];
-        let pendingDeleteId = null;
 
         // ── DOM ──
         const $ = (sel) => document.querySelector(sel);
@@ -229,16 +208,13 @@
         const domLogoutBtn = $('#logout-btn');
         const domEntryDate = $('#entry-date');
         const domPlayerRows = $('#player-rows');
+        const domTotalValue = $('#total-value');
         const domAddPlayerBtn = $('#add-player-btn');
         const domSubmitBtn = $('#submit-btn');
         const domRecordsLoading = $('#records-loading');
         const domRecordsEmpty = $('#records-empty');
         const domRecordsList = $('#records-list');
         const domRecordCount = $('#record-count');
-        const domConfirmDialog = $('#confirm-dialog');
-        const domConfirmMsg = $('#confirm-msg');
-        const domConfirmCancel = $('#confirm-cancel');
-        const domConfirmOk = $('#confirm-ok');
         const domToast = $('#toast');
 
         // ── Toast ──
@@ -367,79 +343,15 @@
                 const colorClass = val >= 0 ? 'text-emerald-400' : 'text-red-400';
                 const sign = val >= 0 ? '+' : '';
                 return `
-                <div class="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/50 text-sm group" id="row-${r.id}">
+                <div class="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/50 text-sm" id="row-${r.id}">
                     <span class="text-xs text-zinc-600 w-20 shrink-0 font-mono">${dateStr}</span>
                     <span class="text-zinc-200 font-medium truncate flex-1 min-w-0">${escHtml(r.player)}</span>
-                    <span class="font-mono font-semibold shrink-0 text-right w-20 ${colorClass}" id="val-${r.id}">${sign}${val}分</span>
-                    <span class="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="window.__editRecord(${r.id})" class="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors" title="编辑">
-                            <i class="fa-solid fa-pen text-xs"></i>
-                        </button>
-                        <button onclick="window.__askDelete(${r.id})" class="w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-red-900 text-zinc-400 hover:text-red-400 transition-colors" title="删除">
-                            <i class="fa-solid fa-trash text-xs"></i>
-                        </button>
-                    </span>
+                    <span class="font-mono font-semibold shrink-0 text-right w-20 ${colorClass}">${sign}${val}分</span>
                 </div>`;
             }).join('');
         }
 
-        // ── Edit ──
-        window.__editRecord = async function(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
-            const valEl = document.getElementById('val-' + id);
-            if (!valEl) return;
-
-            const currentVal = parseFloat(record.value) || 0;
-            valEl.innerHTML = `<input type="number" id="edit-input-${id}" value="${currentVal}"
-                class="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-sm font-mono text-zinc-200 text-right
-                       focus:outline-none focus:border-zinc-400 [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                autofocus>`;
-
-            const input = document.getElementById('edit-input-' + id);
-            input.focus();
-            input.select();
-
-            const save = async () => {
-                const newVal = parseFloat(input.value);
-                if (isNaN(newVal)) { showToast('请输入有效数字', 'error'); return; }
-                const { error } = await supabase.from(TABLE_NAME).update({ value: newVal }).eq('id', id);
-                if (error) { showToast('更新失败: ' + error.message, 'error'); return; }
-                record.value = newVal;
-                renderRecords();
-                showToast('已更新');
-            };
-
-            input.addEventListener('blur', save);
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
-        };
-
-        // ── Delete ──
-        window.__askDelete = function(id) {
-            const record = allRecords.find(r => r.id === id);
-            if (!record) return;
-            pendingDeleteId = id;
-            domConfirmMsg.textContent = `${record.play_date} · ${record.player} · ${record.value}分`;
-            domConfirmDialog.classList.add('open');
-        };
-
-        domConfirmCancel.addEventListener('click', () => {
-            domConfirmDialog.classList.remove('open');
-            pendingDeleteId = null;
-        });
-
-        domConfirmOk.addEventListener('click', async () => {
-            if (!pendingDeleteId) return;
-            const id = pendingDeleteId;
-            domConfirmDialog.classList.remove('open');
-            pendingDeleteId = null;
-
-            const { error } = await supabase.from(TABLE_NAME).delete().eq('id', id);
-            if (error) { showToast('删除失败: ' + error.message, 'error'); return; }
-            allRecords = allRecords.filter(r => r.id !== id);
-            renderRecords();
-            showToast('已删除');
-        });
+        // ── Edit & Delete removed — recent records are read-only ──
 
         // ── Player Rows ──
         function createPlayerRow(name = '', value = '') {
@@ -455,7 +367,10 @@
                 <button class="remove-row-btn shrink-0 w-9 h-9 flex items-center justify-center rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-950/30 transition-colors" title="移除">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>`;
-            div.querySelector('.remove-row-btn').addEventListener('click', () => div.remove());
+            div.querySelector('.remove-row-btn').addEventListener('click', () => {
+                div.remove();
+                updateTotal();
+            });
             return div;
         }
 
@@ -472,8 +387,26 @@
             return rows;
         }
 
+        // ── Real-time total calculator ──
+        function updateTotal() {
+            const rows = getPlayerRows();
+            const total = rows.reduce((sum, r) => sum + (isNaN(r.value) ? 0 : r.value), 0);
+            const sign = total >= 0 ? '+' : '';
+            const colorClass = total >= 0 ? 'text-emerald-400' : 'text-red-400';
+            domTotalValue.textContent = `${sign}${total}分`;
+            domTotalValue.className = `font-mono text-sm font-semibold ${colorClass}`;
+        }
+
+        // Event delegation: recalculate total on input change
+        domPlayerRows.addEventListener('input', (e) => {
+            if (e.target.matches('.player-name, .player-value')) {
+                updateTotal();
+            }
+        });
+
         domAddPlayerBtn.addEventListener('click', () => {
             domPlayerRows.appendChild(createPlayerRow());
+            updateTotal();
             const names = domPlayerRows.querySelectorAll('.player-name');
             if (names.length > 0) names[names.length - 1].focus();
         });
@@ -516,6 +449,7 @@
             showToast(`成功录入 ${rows.length} 条记录`);
             domPlayerRows.innerHTML = '';
             for (let i = 0; i < 6; i++) domPlayerRows.appendChild(createPlayerRow());
+            updateTotal();
             await fetchRecords();
         });
 
