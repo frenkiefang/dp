@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>胜率计算器 — 扑克胜率分析</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #09090B;
+            --bg-card: #18181B;
+            --border: #27272A;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --profit: #10B981;
+            --loss: #EF4444;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        body { scrollbar-width: none; }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: #18181B;
+            border: 1px solid #27272A;
+            border-radius: 14px;
+            color: #FAFAFA;
+            font-size: 16px;
+            font-family: 'JetBrains Mono', 'Menlo', monospace;
+            transition: all 200ms ease;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: #3F3F46;
+            box-shadow: 0 0 0 3px rgba(63, 63, 70, 0.3);
+        }
+        .input-field::placeholder {
+            color: #52525B;
+        }
+
+        .stat-card {
+            background: #18181B;
+            border: 1px solid #27272A;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 300ms ease;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: #FAFAFA;
+            color: #09090B;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 200ms ease;
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .num-pop {
+            animation: num-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes num-pop {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+    <main class="w-full max-w-md px-4 pt-4 pb-8">
+
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-zinc-100">
+                    <i class="fa-solid fa-calculator mr-2 text-zinc-500" style="font-size:15px;"></i>胜率计算器
+                </h1>
+                <p class="text-xs text-zinc-500 mt-0.5">扑克战绩数据分析</p>
+            </div>
+            <a href="./index.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="hidden sm:inline">返回看板</span>
+            </a>
+        </header>
+
+        <!-- Input Section -->
+        <section class="mb-5">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">
+                    <i class="fa-solid fa-pen-to-square mr-1.5"></i>输入数据
+                </p>
+
+                <div class="space-y-4">
+                    <!-- Total Sessions -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">总场次</label>
+                        <input type="number" id="total-sessions" class="input-field" placeholder="0" min="0" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Winning Sessions -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">胜场数</label>
+                        <input type="number" id="win-sessions" class="input-field" placeholder="0" min="0" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Total Profit -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">总盈亏（分）</label>
+                        <input type="number" id="total-profit" class="input-field" placeholder="+/- 输入总积分" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Best Day -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">最佳单日（分）<span class="text-zinc-600 ml-1">可选</span></label>
+                        <input type="number" id="best-day" class="input-field" placeholder="单日最高积分" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Worst Day -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">最差单日（分）<span class="text-zinc-600 ml-1">可选</span></label>
+                        <input type="number" id="worst-day" class="input-field" placeholder="单日最低积分" value="" autocomplete="off">
+                    </div>
+                </div>
+
+                <button id="calc-btn" class="btn-primary mt-5">
+                    <i class="fa-solid fa-chart-pie mr-1.5"></i>计算胜率
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="hidden mb-5">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">
+                    <i class="fa-solid fa-chart-simple mr-1.5"></i>分析结果
+                </p>
+
+                <!-- Big Win Rate Display -->
+                <div class="text-center mb-5">
+                    <p class="text-xs text-zinc-500 mb-1">胜率</p>
+                    <p id="result-winrate" class="font-mono text-5xl font-bold tracking-tight"></p>
+                    <div id="result-tag" class="mt-2"></div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="stat-card">
+                        <p id="result-win-sessions" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">胜场 / 总场</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-avg" class="font-mono text-xl font-semibold"></p>
+                        <p class="text-xs text-zinc-500 mt-1">场均盈亏</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-best" class="font-mono text-xl font-semibold text-emerald-400"></p>
+                        <p class="text-xs text-zinc-500 mt-1">最佳单日</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-worst" class="font-mono text-xl font-semibold text-red-400"></p>
+                        <p class="text-xs text-zinc-500 mt-1">最差单日</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-profit-factor" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">盈亏比</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-streak" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">波动评级</p>
+                    </div>
+                </div>
+
+                <!-- Feedback Message -->
+                <div id="result-feedback" class="mt-4 p-4 rounded-xl text-center text-sm font-medium"></div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-xs text-zinc-700 pb-4">
+            Powered by 积分看板 · 胜率计算器
+        </footer>
+    </main>
+
+    <script>
+    (function() {
+        const $ = (sel) => document.querySelector(sel);
+
+        const domTotalSessions = $('#total-sessions');
+        const domWinSessions = $('#win-sessions');
+        const domTotalProfit = $('#total-profit');
+        const domBestDay = $('#best-day');
+        const domWorstDay = $('#worst-day');
+        const domCalcBtn = $('#calc-btn');
+        const domResultsSection = $('#results-section');
+        const domResultWinrate = $('#result-winrate');
+        const domResultTag = $('#result-tag');
+        const domResultWinSessions = $('#result-win-sessions');
+        const domResultAvg = $('#result-avg');
+        const domResultBest = $('#result-best');
+        const domResultWorst = $('#result-worst');
+        const domResultProfitFactor = $('#result-profit-factor');
+        const domResultStreak = $('#result-streak');
+        const domResultFeedback = $('#result-feedback');
+
+        function formatPoints(val) {
+            const abs = Math.abs(val);
+            const formatted = abs >= 10000
+                ? (abs / 10000).toFixed(1) + 'w'
+                : abs.toLocaleString('zh-CN');
+            return val > 0 ? `+${formatted}分` : val < 0 ? `-${formatted}分` : '0分';
+        }
+
+        function getWinRateTag(winRate) {
+            if (winRate >= 80) return { text: '碾压级', emoji: '🔥', class: 'bg-amber-400/20 text-amber-400 border border-amber-400/40' };
+            if (winRate >= 65) return { text: '稳定盈利', emoji: '💎', class: 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/40' };
+            if (winRate >= 55) return { text: '小幅盈利', emoji: '📈', class: 'bg-sky-400/20 text-sky-400 border border-sky-400/40' };
+            if (winRate >= 45) return { text: '盈亏平衡', emoji: '⚖️', class: 'bg-zinc-400/20 text-zinc-400 border border-zinc-400/40' };
+            if (winRate >= 35) return { text: '小幅亏损', emoji: '📉', class: 'bg-orange-400/20 text-orange-400 border border-orange-400/40' };
+            if (winRate >= 20) return { text: '持续亏损', emoji: '⚠️', class: 'bg-red-400/20 text-red-400 border border-red-400/40' };
+            return { text: '支付站', emoji: '💸', class: 'bg-red-500/20 text-red-400 border border-red-500/40' };
+        }
+
+        function getVolatilityRating(bestDay, worstDay) {
+            const swing = Math.abs(bestDay) + Math.abs(worstDay);
+            if (swing === 0) return { text: '暂无数据', emoji: '—' };
+            if (swing > 1000) return { text: '极度波动', emoji: '🌪️' };
+            if (swing > 600) return { text: '高度波动', emoji: '🎢' };
+            if (swing > 300) return { text: '中度波动', emoji: '🌊' };
+            if (swing > 100) return { text: '轻度波动', emoji: '💧' };
+            return { text: '平稳运行', emoji: '🛶' };
+        }
+
+        function getFeedback(winRate, avgPerSession, totalProfit) {
+            if (winRate >= 70 && totalProfit > 0) {
+                return { text: '你是牌桌上的王者！继续保持这种统治力 👑', class: 'bg-amber-400/10 text-amber-300 border border-amber-400/30' };
+            }
+            if (winRate >= 55 && totalProfit > 0) {
+                return { text: '稳定盈利的节奏，持续下去就能稳步增长 📈', class: 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30' };
+            }
+            if (winRate >= 45 && totalProfit > 0) {
+                return { text: '微利也是利，优化策略可以提升更多 💪', class: 'bg-sky-400/10 text-sky-300 border border-sky-400/30' };
+            }
+            if (winRate >= 45) {
+                return { text: '在盈亏线上挣扎，控制回撤是关键 🎯', class: 'bg-zinc-400/10 text-zinc-300 border border-zinc-400/30' };
+            }
+            if (winRate >= 30) {
+                return { text: '胜率偏低，复盘研究对手策略可能会有帮助 📚', class: 'bg-orange-400/10 text-orange-300 border border-orange-400/30' };
+            }
+            return { text: '今天你是慈善家！调整策略，明天会更好 💪', class: 'bg-red-400/10 text-red-300 border border-red-400/30' };
+        }
+
+        function calculate() {
+            const totalSessions = parseInt(domTotalSessions.value) || 0;
+            const winSessions = parseInt(domWinSessions.value) || 0;
+            const totalProfit = parseInt(domTotalProfit.value) || 0;
+            const bestDay = parseInt(domBestDay.value) || 0;
+            const worstDay = parseInt(domWorstDay.value) || 0;
+
+            if (totalSessions <= 0) {
+                shakeInput(domTotalSessions);
+                return;
+            }
+
+            if (winSessions > totalSessions) {
+                shakeInput(domWinSessions);
+                return;
+            }
+
+            // Calculations
+            const winRate = Math.round((winSessions / totalSessions) * 100);
+            const avgPerSession = Math.round(totalProfit / totalSessions);
+            const profitFactor = bestDay > 0 && worstDay < 0
+                ? (Math.abs(bestDay / worstDay)).toFixed(2)
+                : '—';
+
+            const tag = getWinRateTag(winRate);
+            const volatility = getVolatilityRating(bestDay, worstDay);
+            const feedback = getFeedback(winRate, avgPerSession, totalProfit);
+
+            // Render results
+            domResultWinrate.textContent = winRate + '%';
+            domResultWinrate.className = 'font-mono text-5xl font-bold tracking-tight num-pop ' +
+                (winRate >= 50 ? 'text-emerald-400' : 'text-red-400');
+
+            domResultTag.innerHTML = `<span class="tag-chip ${tag.class}">${tag.emoji} ${tag.text}</span>`;
+
+            domResultWinSessions.textContent = `${winSessions} / ${totalSessions}`;
+            domResultAvg.textContent = formatPoints(avgPerSession);
+            domResultAvg.className = 'font-mono text-xl font-semibold num-pop ' +
+                (avgPerSession >= 0 ? 'text-emerald-400' : 'text-red-400');
+
+            domResultBest.textContent = bestDay !== 0 ? formatPoints(bestDay) : '—';
+            domResultWorst.textContent = worstDay !== 0 ? formatPoints(worstDay) : '—';
+            domResultProfitFactor.textContent = profitFactor;
+            domResultStreak.innerHTML = `${volatility.emoji} ${volatility.text}`;
+
+            domResultFeedback.textContent = feedback.text;
+            domResultFeedback.className = 'mt-4 p-4 rounded-xl text-center text-sm font-medium ' + feedback.class;
+
+            // Show results
+            domResultsSection.classList.remove('hidden');
+            domResultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function shakeInput(el) {
+            el.style.borderColor = '#EF4444';
+            el.style.animation = 'none';
+            el.offsetHeight; // force reflow
+            el.style.animation = 'shake 400ms ease';
+            setTimeout(() => {
+                el.style.borderColor = '#27272A';
+                el.style.animation = '';
+            }, 500);
+            el.focus();
+        }
+
+        // Event Listeners
+        domCalcBtn.addEventListener('click', calculate);
+
+        // Enter key triggers calculation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                calculate();
+            }
+        });
+
+        // Auto-compute on input change (debounced)
+        let calcTimeout;
+        document.querySelectorAll('.input-field').forEach(input => {
+            input.addEventListener('input', () => {
+                clearTimeout(calcTimeout);
+                calcTimeout = setTimeout(calculate, 600);
+            });
+        });
+
+        // Add shake animation
+        const shakeStyle = document.createElement('style');
+        shakeStyle.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-6px); }
+                50% { transform: translateX(6px); }
+                75% { transform: translateX(-4px); }
+            }
+        `;
+        document.head.appendChild(shakeStyle);
+    })();
+    </script>
+</body>
+</html>

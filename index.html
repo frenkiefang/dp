@@ -107,6 +107,8 @@
             transform: translate(-50%, 100%);
             width: 100%;
             max-width: 480px;
+            max-height: 85vh;
+            overflow-y: auto;
             z-index: 51;
             background: var(--bg-card);
             border-radius: 20px 20px 0 0;
@@ -264,6 +266,35 @@
         #chart {
             min-height: 300px;
         }
+
+        /* ── Player Tag Badge ── */
+        .player-tag-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            animation: tag-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .player-tag-badge .tag-emoji {
+            font-size: 13px;
+        }
+        @keyframes tag-pop {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ── Detail Chart Container ── */
+        .detail-chart-container {
+            background: #09090B;
+            border-radius: 14px;
+            padding: 12px 8px 4px;
+            margin: 8px 0 16px;
+            border: 1px solid #27272A;
+        }
         /* Override ApexCharts default tooltip wrapper — remove white border */
         .apexcharts-tooltip {
             background: transparent !important;
@@ -294,6 +325,10 @@
                 </p>
             </div>
             <div id="connection-indicator" class="flex items-center gap-3 text-xs text-zinc-500">
+                <a href="./calculator.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="胜率计算器">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span class="hidden sm:inline">胜率计算器</span>
+                </a>
                 <a href="./admin.html" class="text-zinc-600 hover:text-zinc-400 transition-colors" title="数据管理">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </a>
@@ -537,6 +572,7 @@
         let currentMonth = 'all';
         let chartMode = 'cumulative'; // 'cumulative' | 'daily'
         let chart = null;
+        let detailChart = null;      // chart instance for bottom sheet player detail
         let playerColorMap = {};     // playerName → hex color
         let visibleSeries = {};      // playerName → boolean
         let chartDates = [];         // sorted unique dates for current chart (for label formatting)
@@ -1239,6 +1275,154 @@
         }
 
         // ──────────────────────────────────────────────
+        //  PLAYER TAG & VOLATILITY
+        // ──────────────────────────────────────────────
+        function computePlayerVolatility(playerName) {
+            const playerRows = filteredData.filter(r => r.player === playerName);
+            const dayValues = {};
+            playerRows.forEach(r => {
+                const key = getDateKey(r.play_date);
+                if (!dayValues[key]) dayValues[key] = 0;
+                dayValues[key] += r.value;
+            });
+            const scores = Object.values(dayValues);
+            if (scores.length < 2) return 0;
+            const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+            const variance = scores.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / scores.length;
+            return Math.round(Math.sqrt(variance));
+        }
+
+        function hashName(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = ((hash << 5) - hash) + name.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        function pickTag(name, pool) {
+            return pool[hashName(name) % pool.length];
+        }
+
+        function getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay) {
+
+            // ═══ 排名锁定 ═══
+            if (rank === 1) {
+                return { tag: '传奇扑克王', emoji: '👑', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' };
+            }
+            if (rank === 2) {
+                return { tag: '稳定收银员', emoji: '🏧', color: '#34D399', bg: '#34D39920', border: '#34D39940' };
+            }
+            if (rank === totalPlayers) {
+                return { tag: '爱心捐款人', emoji: '❤️', color: '#EF4444', bg: '#EF444420', border: '#EF444440' };
+            }
+
+            // ═══ 少场次玩家 ══════════════════════════
+            if (gameDays <= 5) {
+                const fewGamePool = avgPerDay > 300
+                    ? [{ tag: '摸鱼大师', emoji: '🎣', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
+                       { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' }]
+                    : avgPerDay > -400
+                    ? [{ tag: '石头人', emoji: '🪨', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
+                       { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
+                       { tag: '摸鱼大师', emoji: '🎣', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' }]
+                    : [{ tag: '神秘失踪人口', emoji: '🫥', color: '#EF4444', bg: '#EF444420', border: '#EF444440' },
+                       { tag: '支付站', emoji: '💸', color: '#EF4444', bg: '#EF444420', border: '#EF444440' }];
+                return pickTag(playerName, fewGamePool);
+            }
+
+            // ═══ 日均盈亏分档（基于真实数据：-810 ~ +707） ═══
+
+            // >+700/天 顶端
+            if (avgPerDay > 700) {
+                return pickTag(playerName, [
+                    { tag: '吸金兽', emoji: '🧲', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
+                    { tag: '人形印钞机', emoji: '🖨️', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' },
+                ]);
+            }
+
+            // +400~700/天 高端盈利
+            if (avgPerDay > 400) {
+                return pickTag(playerName, [
+                    { tag: '扑克猎手', emoji: '🔫', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
+                    { tag: '推土机', emoji: '🚜', color: '#A78BFA', bg: '#A78BFA20', border: '#A78BFA40' },
+                    { tag: '沉默杀手', emoji: '🥷', color: '#A78BFA', bg: '#A78BFA20', border: '#A78BFA40' },
+                ]);
+            }
+
+            // +150~400/天 稳盈
+            if (avgPerDay > 150) {
+                return pickTag(playerName, [
+                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                    { tag: '扑克猎手', emoji: '🔫', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
+                    { tag: '吸金兽', emoji: '🧲', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
+                ]);
+            }
+
+            // +40~150/天 小盈
+            if (avgPerDay > 40) {
+                return pickTag(playerName, [
+                    { tag: '小赢当赢', emoji: '😎', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                    { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                ]);
+            }
+
+            // 0~+40/天 微盈
+            if (avgPerDay > 0) {
+                return pickTag(playerName, [
+                    { tag: '小赢当赢', emoji: '😎', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                    { tag: '黑马选手', emoji: '🐎', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
+                    { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                ]);
+            }
+
+            // -40~0/天 微亏
+            if (avgPerDay > -40) {
+                return pickTag(playerName, [
+                    { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
+                    { tag: '石头人', emoji: '🪨', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
+                    { tag: '黑马选手', emoji: '🐎', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
+                ]);
+            }
+
+            // -150~-40/天 小亏
+            if (avgPerDay > -150) {
+                return pickTag(playerName, [
+                    { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
+                    { tag: '铁头功', emoji: '🤯', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                    { tag: '跟注站站长', emoji: '📞', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
+                ]);
+            }
+
+            // -400~-150/天 中亏
+            if (avgPerDay > -400) {
+                return pickTag(playerName, [
+                    { tag: '铁头功', emoji: '🤯', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                    { tag: '过山车之王', emoji: '🎢', color: '#F472B6', bg: '#F472B620', border: '#F472B640' },
+                    { tag: '悬崖边上', emoji: '🧗', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                ]);
+            }
+
+            // -800~-400/天 大亏
+            if (avgPerDay > -800) {
+                return pickTag(playerName, [
+                    { tag: '悬崖边上', emoji: '🧗', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                    { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                    { tag: '跟注站站长', emoji: '📞', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
+                ]);
+            }
+
+            // <-800/天 巨亏
+            return pickTag(playerName, [
+                { tag: '散财童子', emoji: '💰', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
+                { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                { tag: '支付站', emoji: '💸', color: '#EF4444', bg: '#EF444420', border: '#EF444440' },
+            ]);
+        }
+
+        // ──────────────────────────────────────────────
         //  BOTTOM SHEET
         // ──────────────────────────────────────────────
         function openBottomSheet(playerName, totalScore) {
@@ -1261,23 +1445,56 @@
             const worstDay = days.length > 0 ? Math.min(...days.map(([, v]) => v)) : 0;
             const avgPerDay = gameDays > 0 ? Math.round(totalScore / gameDays) : 0;
 
+            // Volatility
+            const volatility = computePlayerVolatility(playerName);
+
+            // Rank among all filtered players
+            const sorted = getSortedPlayers(filteredData);
+            const totalPlayers = sorted.length;
+            const rank = sorted.findIndex(p => p.name === playerName) + 1;
+
+            // Player tag
+            const playerTag = getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay);
+
             // Color for the player
             const color = playerColorMap[playerName] || '#71717A';
 
+            // Build chart data: daily scores sorted by date
+            const sortedDayEntries = days.sort((a, b) => a[0].localeCompare(b[0]));
+            const chartDatesForPlayer = sortedDayEntries.map(([date]) => date);
+            const chartValues = sortedDayEntries.map(([, val]) => val);
+
             domSheetContent.innerHTML = `
-                <div class="text-center mb-5">
-                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full mb-3"
+                <!-- Player Identity -->
+                <div class="text-center mb-4">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
                          style="background:${color}20; border: 2px solid ${color}40;">
-                        <span class="text-xl font-bold" style="color:${color}">${escapeHtml(playerName.charAt(0))}</span>
+                        <span class="text-lg font-bold" style="color:${color}">${escapeHtml(playerName.charAt(0))}</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-zinc-100">${escapeHtml(playerName)}</h3>
-                    <p class="text-3xl font-mono font-bold mt-2 tracking-tight ${totalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                    <div class="flex items-center justify-center gap-2 mb-1">
+                        <h3 class="text-base font-semibold text-zinc-100">${escapeHtml(playerName)}</h3>
+                        <span class="player-tag-badge"
+                              style="background:${playerTag.bg}; border:1px solid ${playerTag.border}; color:${playerTag.color};">
+                            <span class="tag-emoji">${playerTag.emoji}</span>
+                            ${playerTag.tag}
+                        </span>
+                    </div>
+                    <p class="text-2xl font-mono font-bold mt-1 tracking-tight ${totalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${formatPoints(totalScore)}
                     </p>
-                    <p class="text-xs text-zinc-500 mt-1">周期总积分</p>
+                    <p class="text-xs text-zinc-500 mt-0.5">周期总积分 · 排名 <span class="text-zinc-300 font-semibold">#${rank}/${totalPlayers}</span></p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
+                <!-- Fluctuation Chart -->
+                <div class="detail-chart-container">
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-2 px-1">
+                        <i class="fa-solid fa-chart-line mr-1"></i>积分波动
+                    </p>
+                    <div id="detail-chart" style="min-height:180px;"></div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-3 gap-2.5">
                     <div class="bg-zinc-950 rounded-xl p-3 text-center">
                         <p class="font-mono text-lg font-semibold text-zinc-200">${gameDays}</p>
                         <p class="text-xs text-zinc-500 mt-0.5">总场次</p>
@@ -1305,7 +1522,7 @@
                 </div>
 
                 <button onclick="closeBottomSheet()"
-                    class="w-full mt-5 py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-700 text-zinc-300
+                    class="w-full mt-4 py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-700 text-zinc-300
                            rounded-xl text-sm font-medium transition-colors">
                     关闭
                 </button>
@@ -1315,9 +1532,115 @@
             domSheetOverlay.classList.add('open');
             domSheetPanel.classList.add('open');
             document.body.style.overflow = 'hidden';
+
+            // Initialize detail chart after DOM is ready
+            requestAnimationFrame(() => {
+                renderDetailChart(chartDatesForPlayer, chartValues, playerName, color);
+            });
+        }
+
+        function renderDetailChart(dates, values, playerName, color) {
+            // Destroy previous detail chart if exists
+            if (detailChart) {
+                detailChart.destroy();
+                detailChart = null;
+            }
+
+            const chartEl = document.getElementById('detail-chart');
+            if (!chartEl || dates.length === 0) return;
+
+            const options = {
+                chart: {
+                    type: 'bar',
+                    height: 180,
+                    background: 'transparent',
+                    toolbar: { show: false },
+                    zoom: { enabled: false },
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 500,
+                    },
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                },
+                colors: values.map(v => v >= 0 ? '#10B981' : '#EF4444'),
+                series: [{
+                    name: '单日积分',
+                    data: values.map((v, i) => ({ x: i, y: v })),
+                }],
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        columnWidth: '55%',
+                        distributed: true,
+                    },
+                },
+                grid: {
+                    borderColor: '#27272A',
+                    strokeDashArray: 4,
+                    xaxis: { lines: { show: false } },
+                    yaxis: { lines: { show: true } },
+                    padding: { top: 8, right: 4, bottom: 0, left: 4 },
+                },
+                xaxis: {
+                    type: 'numeric',
+                    min: -0.5,
+                    max: dates.length > 0 ? dates.length - 0.5 : 0,
+                    tickAmount: dates.length - 1,
+                    labels: {
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Inter, sans-serif' },
+                        formatter: (val) => {
+                            const idx = Math.round(val);
+                            if (idx < 0 || idx >= dates.length) return '';
+                            const parts = dates[idx].split('-');
+                            const month = parseInt(parts[1], 10);
+                            // Only show label when month changes (or first item)
+                            const prevMonth = idx > 0 ? parseInt(dates[idx - 1].split('-')[1], 10) : null;
+                            if (prevMonth === null || prevMonth !== month) {
+                                return month + '月';
+                            }
+                            return '';
+                        },
+                        hideOverlappingLabels: false,
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'JetBrains Mono, monospace' },
+                        formatter: (val) => {
+                            if (Math.abs(val) >= 10000) return (val / 10000).toFixed(1) + 'w';
+                            return Math.round(val);
+                        },
+                    },
+                },
+                tooltip: {
+                    custom: function({ dataPointIndex, w }) {
+                        if (dataPointIndex == null || dataPointIndex < 0) return '';
+                        const dateStr = dates[dataPointIndex] || '';
+                        const val = w.globals.series[0][dataPointIndex];
+                        const valColor = val >= 0 ? '#10B981' : '#EF4444';
+                        return `<div style="background:rgba(24,24,27,0.95);border-radius:10px;padding:8px 12px;font-family:Inter,sans-serif;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.5);">
+                            <div style="color:#A1A1AA;margin-bottom:4px;">${dateStr}</div>
+                            <div style="font-weight:600;color:${valColor};">${formatPoints(val)}</div>
+                        </div>`;
+                    },
+                },
+                legend: { show: false },
+                dataLabels: { enabled: false },
+            };
+
+            detailChart = new ApexCharts(chartEl, options);
+            detailChart.render();
         }
 
         function closeBottomSheet() {
+            // Destroy detail chart
+            if (detailChart) {
+                detailChart.destroy();
+                detailChart = null;
+            }
             domSheetOverlay.classList.remove('open');
             domSheetPanel.classList.remove('open');
             document.body.style.overflow = '';
