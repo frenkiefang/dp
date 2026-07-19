@@ -1,1050 +1,415 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#09090B">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Poker Hand Calculator</title>
-
-<!-- Fonts: Inter (UI) + JetBrains Mono (numbers) — matching index -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-  /* ── CSS Variables (dark theme, matching index) ── */
-  :root {
-    --bg-primary:    #09090B;
-    --bg-card:       #18181B;
-    --bg-elevated:   #27272A;
-    --border:        #27272A;
-    --border-light:  #3F3F46;
-    --text-primary:  #FAFAFA;
-    --text-secondary:#A1A1AA;
-    --text-muted:    #71717A;
-    --accent:        #10B981;
-    --accent-dim:    #059669;
-    --accent-bg:     rgba(16, 185, 129, 0.10);
-    --red:           #EF4444;
-    --red-bg:        rgba(239, 68, 68, 0.12);
-    --win-green:     #10B981;
-    --tie-gray:      #A1A1AA;
-    --lose-red:      #EF4444;
-    --card-red:      #EF4444;
-    --card-black:    #FAFAFA;
-    --shadow-sm:     0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md:     0 4px 16px rgba(0,0,0,0.4);
-    --radius-sm:     8px;
-    --radius-md:     12px;
-    --radius-lg:     16px;
-    --radius-xl:     20px;
-  }
-
-  /* ── Reset & Base ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  * {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  html, body {
-    height: 100%;
-    overflow-x: hidden;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  /* Hide scrollbar */
-  ::-webkit-scrollbar { width: 0; height: 0; }
-  body { scrollbar-width: none; }
-
-  /* ── Page Container ── */
-  .page {
-    width: 100%;
-    max-width: 448px;
-    margin: 0 auto;
-    padding: 16px 16px 48px;
-    position: relative;
-  }
-
-  /* ── Header ── */
-  .header { text-align: center; margin-bottom: 20px; }
-  .header-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .header h1 {
-    font-family: 'Inter', sans-serif;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-  }
-  .header h1 span { color: var(--accent); }
-  .header-sub {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 400;
-    letter-spacing: 0.02em;
-  }
-
-  /* ── Divider ── */
-  .divider {
-    display: flex; align-items: center; gap: 12px; margin: 12px 0;
-  }
-  .divider::before, .divider::after {
-    content: ''; flex: 1; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-light), transparent);
-  }
-  .divider-icon { color: var(--text-muted); font-size: 12px; opacity: 0.5; }
-
-  /* ── Table Panel ── */
-  .table-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    padding: 16px;
-    box-shadow: var(--shadow-md);
-  }
-
-  /* ── Mode Tabs ── */
-  .mode-tabs {
-    display: flex; gap: 4px; margin-bottom: 16px;
-    background: var(--bg-primary);
-    border-radius: 10px; padding: 3px;
-    border: 1px solid var(--border);
-  }
-  .tab-btn {
-    flex: 1; padding: 8px 4px;
-    border-radius: 8px; border: none;
-    background: transparent; color: var(--text-muted);
-    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-    cursor: pointer; transition: all 200ms ease;
-    letter-spacing: 0.02em;
-  }
-  .tab-btn.active {
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  }
-  .tab-btn:active:not(.active) { background: var(--bg-elevated); }
-
-  /* ── Hands Layout ── */
-  .hands-area {
-    display: grid;
-    grid-template-columns: 1fr 36px 1fr;
-    gap: 8px;
-    align-items: start;
-    margin-bottom: 12px;
-  }
-
-  .hand-panel {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 12px 10px;
-  }
-  .hand-panel-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 10px;
-    text-align: center;
-  }
-  .card-slots {
-    display: flex; gap: 8px; justify-content: center; margin-bottom: 8px;
-  }
-
-  /* ── Playing Cards ── */
-  .card-slot {
-    width: 60px; height: 84px;
-    border-radius: var(--radius-sm);
-    border: 1.5px dashed var(--border-light);
-    background: var(--bg-elevated);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 200ms ease;
-    position: relative;
-  }
-  .card-slot:active { transform: scale(0.95); }
-  .card-slot.filled {
-    background: var(--bg-card);
-    border: 1.5px solid var(--border-light);
-    box-shadow: var(--shadow-sm);
-    border-style: solid;
-  }
-  .card-slot.filled:active { transform: scale(0.95); }
-  .card-slot .plus { font-size: 22px; color: var(--text-muted); line-height: 1; }
-
-  .card-inner {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; width: 100%; height: 100%; padding: 4px;
-  }
-  .card-rank {
-    font-family: 'Inter', sans-serif;
-    font-size: 20px; font-weight: 700; line-height: 1;
-  }
-  .card-suit { font-size: 20px; line-height: 1; margin-top: 1px; }
-
-  .card-slot.red-card .card-rank,
-  .card-slot.red-card .card-suit { color: var(--card-red); }
-  .card-slot.black-card .card-rank,
-  .card-slot.black-card .card-suit { color: var(--card-black); }
-
-  /* Corner pips */
-  .card-corner {
-    position: absolute; top: 3px; left: 4px;
-    font-size: 9px; font-weight: 700; line-height: 1.1;
-  }
-  .card-corner-br {
-    position: absolute; bottom: 3px; right: 4px;
-    font-size: 9px; font-weight: 700; line-height: 1.1;
-    transform: rotate(180deg);
-  }
-  .card-slot.red-card .card-corner,
-  .card-slot.red-card .card-corner-br { color: var(--card-red); }
-  .card-slot.black-card .card-corner,
-  .card-slot.black-card .card-corner-br { color: var(--card-black); }
-
-  .clear-hand {
-    font-size: 11px; color: var(--text-muted); cursor: pointer;
-    text-align: center; display: block; opacity: 0.6;
-    transition: opacity 150ms;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.05em;
-  }
-  .clear-hand:active { opacity: 1; color: var(--text-secondary); }
-
-  /* VS badge */
-  .vs-col {
-    display: flex; align-items: center; justify-content: center;
-    padding-top: 44px;
-  }
-  .vs-badge {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    background: var(--accent-bg);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Inter', sans-serif;
-    font-size: 12px; font-weight: 700;
-    color: var(--accent);
-  }
-
-  /* ── Community Cards ── */
-  .community-section { margin-bottom: 12px; }
-  .community-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-muted);
-    margin-bottom: 8px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .community-label span { opacity: 0.5; font-size: 9px; color: var(--text-muted); }
-  .community-slots { display: flex; gap: 6px; }
-  .community-slot {
-    width: 46px; height: 64px;
-    border-radius: 7px;
-    border: 1.5px dashed var(--border-light);
-    background: var(--bg-elevated);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 200ms ease;
-    position: relative;
-  }
-  .community-slot:active { transform: scale(0.95); }
-  .community-slot.filled {
-    background: var(--bg-card);
-    border: 1.5px solid var(--border-light);
-    box-shadow: var(--shadow-sm);
-    border-style: solid;
-  }
-  .community-slot .plus { font-size: 16px; color: var(--text-muted); }
-  .community-slot .card-rank { font-size: 16px; }
-  .community-slot .card-suit { font-size: 16px; }
-  .community-slot .card-corner { font-size: 8px; }
-  .community-slot .card-corner-br { font-size: 8px; }
-
-  /* ── Card Picker (bottom sheet style) ── */
-  .picker-overlay {
-    position: fixed; inset: 0; z-index: 50;
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0; pointer-events: none;
-    transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-  }
-  .picker-overlay.active { opacity: 1; pointer-events: auto; }
-
-  .picker-area {
-    position: fixed;
-    bottom: 0; left: 50%;
-    transform: translate(-50%, 100%);
-    width: 100%; max-width: 448px;
-    z-index: 51;
-    background: var(--bg-card);
-    border-radius: 20px 20px 0 0;
-    padding: 12px 16px 28px;
-    transition: transform 350ms cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.5);
-  }
-  .picker-area.active { transform: translate(-50%, 0); }
-
-  .picker-handle {
-    width: 36px; height: 4px;
-    background: var(--border-light);
-    border-radius: 2px;
-    margin: 0 auto 14px;
-  }
-
-  .picker-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-muted);
-    margin-bottom: 12px; text-align: center;
-  }
-
-  .rank-grid {
-    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
-    justify-content: center;
-  }
-  .rank-btn {
-    width: 40px; height: 40px;
-    border-radius: var(--radius-sm);
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer;
-    transition: all 150ms ease;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .rank-btn:active { transform: scale(0.94); background: var(--bg-elevated); }
-  .rank-btn.selected {
-    background: var(--accent); border-color: var(--accent);
-    color: #fff; box-shadow: 0 0 12px rgba(16,185,129,0.25);
-  }
-  .rank-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-
-  .suit-grid { display: flex; gap: 8px; }
-  .suit-btn {
-    flex: 1; height: 48px;
-    border-radius: 10px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    font-size: 22px;
-    cursor: pointer;
-    transition: all 150ms ease;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .suit-btn:active { transform: scale(0.95); }
-  .suit-btn.red-suit:hover, .suit-btn.red-suit.selected,
-  .suit-btn.red-suit:active {
-    background: var(--red-bg); border-color: var(--red); color: var(--red);
-  }
-  .suit-btn.black-suit:hover, .suit-btn.black-suit.selected,
-  .suit-btn.black-suit:active {
-    background: rgba(250,250,250,0.08); border-color: var(--border-light); color: var(--text-primary);
-  }
-  .suit-btn.selected { transform: scale(1.03); }
-  .suit-btn:disabled { opacity: 0.15; cursor: not-allowed; }
-
-  .picker-note {
-    margin-top: 12px; font-size: 11px;
-    color: var(--text-muted); opacity: 0.7;
-    font-family: 'JetBrains Mono', monospace;
-    text-align: center; min-height: 16px;
-  }
-
-  /* ── Opponent number selector ── */
-  .opp-num-row { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
-  .opp-num-btn {
-    width: 36px; height: 36px; border-radius: var(--radius-sm);
-    background: var(--bg-elevated); border: 1px solid var(--border);
-    color: var(--text-secondary); font-family: 'Inter', sans-serif;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: all 150ms ease;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .opp-num-btn:active { transform: scale(0.94); }
-  .opp-num-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 8px rgba(16,185,129,0.2); }
-  .opp-mode-link {
-    font-size: 11px; color: var(--text-muted); cursor: pointer;
-    text-align: center; opacity: 0.7; transition: opacity 150ms;
-    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
-    display: block; margin-top: 6px;
-  }
-  .opp-mode-link:active { opacity: 1; color: var(--text-secondary); }
-  .vs-badge.wide { width: auto; padding: 0 10px; border-radius: 18px; font-size: 11px; }
-
-  /* ── Calculate Button ── */
-  .calc-btn {
-    width: 100%; padding: 14px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
-    border: none;
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    transition: all 200ms ease;
-    box-shadow: 0 2px 16px rgba(16, 185, 129, 0.2);
-    margin-bottom: 12px;
-  }
-  .calc-btn:active:not(:disabled) { transform: scale(0.98); }
-  .calc-btn:disabled {
-    opacity: 0.3; cursor: not-allowed;
-    background: var(--bg-elevated); box-shadow: none; color: var(--text-muted);
-  }
-
-  /* ── Results ── */
-  .results { display: none; }
-  .results.visible { display: block; animation: fadeIn 350ms ease; }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .results-header {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-muted);
-    margin-bottom: 12px;
-  }
-
-  /* Stat cards */
-  .stats-row {
-    display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
-    margin-bottom: 14px;
-  }
-  .stat-card {
-    background: var(--bg-primary);
-    border-radius: var(--radius-md); padding: 12px 8px;
-    text-align: center;
-    border: 1px solid var(--border);
-  }
-  .stat-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; font-weight: 500;
-    letter-spacing: 0.15em;
-    text-transform: uppercase; color: var(--text-muted);
-    margin-bottom: 6px;
-  }
-  .stat-val {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 24px; font-weight: 700; line-height: 1;
-  }
-  .stat-val.win  { color: var(--win-green); }
-  .stat-val.tie  { color: var(--tie-gray); }
-  .stat-val.lose { color: var(--lose-red); }
-
-  /* Equity bar */
-  .equity-bar-wrap { margin-bottom: 14px; }
-  .equity-bar-labels {
-    display: flex; justify-content: space-between;
-    font-size: 11px; color: var(--text-muted); margin-bottom: 6px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .equity-bar {
-    height: 10px; border-radius: 5px;
-    background: var(--bg-primary);
-    overflow: hidden; display: flex;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
-  }
-  .bar-win  { background: linear-gradient(90deg, #059669, #10B981); height: 100%; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
-  .bar-tie  { background: linear-gradient(90deg, #71717A, #A1A1AA); height: 100%; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
-  .bar-lose { background: linear-gradient(90deg, #DC2626, #EF4444); height: 100%; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
-
-  /* Hand breakdown */
-  .breakdown-panel {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md); padding: 14px;
-  }
-  .breakdown-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--text-muted);
-    margin-bottom: 12px;
-  }
-  .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-  .breakdown-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .breakdown-name { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .breakdown-pct {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--accent); font-size: 12px; flex-shrink: 0; margin-left: 8px;
-  }
-
-  /* Mini bar per hand rank */
-  .mini-bar {
-    height: 3px; border-radius: 2px;
-    background: var(--border);
-    margin-top: 3px; overflow: hidden;
-  }
-  .mini-bar-fill {
-    height: 100%; border-radius: 2px;
-    background: var(--accent);
-    transition: width 0.6s ease;
-  }
-
-  .sim-note {
-    text-align: center; margin-top: 12px;
-    font-size: 10px; color: var(--text-muted); opacity: 0.4;
-    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;
-  }
-
-  /* ── Footer ── */
-  .footer {
-    text-align: center; margin-top: 20px;
-    font-size: 10px; color: var(--text-muted); opacity: 0.3;
-    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em;
-  }
-
-  /* ── Responsive: slightly larger on wider screens ── */
-  @media (min-width: 480px) {
-    .page { padding: 24px 20px 56px; }
-    .card-slot { width: 66px; height: 92px; }
-    .card-rank { font-size: 22px; }
-    .card-suit { font-size: 22px; }
-    .community-slot { width: 50px; height: 70px; }
-    .rank-btn { width: 42px; height: 42px; font-size: 15px; }
-  }
-</style>
-</head>
-<body>
-
-<div class="page">
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-eyebrow">Texas Hold'em</div>
-    <h1>Poker Hand <span>Calculator</span></h1>
-    <p class="header-sub">Monte Carlo equity simulation · 30,000 hands per calculation</p>
-  </div>
-
-  <div class="table-panel">
-
-    <!-- Mode tabs -->
-    <div class="mode-tabs">
-      <button class="tab-btn active" onclick="setMode('preflop')">Preflop</button>
-      <button class="tab-btn" onclick="setMode('postflop')">With Board Cards</button>
-    </div>
-
-    <!-- Hole cards -->
-    <div class="hands-area">
-      <div class="hand-panel">
-        <div class="hand-panel-label">Your hand</div>
-        <div class="card-slots">
-          <div class="card-slot" id="my-0" onclick="openPicker('my',0)"><span class="plus">+</span></div>
-          <div class="card-slot" id="my-1" onclick="openPicker('my',1)"><span class="plus">+</span></div>
-        </div>
-        <span class="clear-hand" onclick="event.stopPropagation(); clearHand('my')">clear ×</span>
-      </div>
-      <div class="vs-col"><div class="vs-badge" id="vs-badge">VS 1</div></div>
-      <div class="hand-panel" id="opp-panel">
-        <div class="hand-panel-label" id="opp-label">Opponents</div>
-
-        <!-- RANDOM OPPONENTS MODE (default) -->
-        <div id="opp-random-section">
-          <div class="opp-num-row" id="opp-num-row"></div>
-          <span class="opp-mode-link" onclick="event.stopPropagation(); switchOppMode('specific')">Enter specific hand →</span>
-        </div>
-
-        <!-- SPECIFIC OPPONENT MODE (hidden initially) -->
-        <div id="opp-specific-section" style="display:none">
-          <div class="card-slots">
-            <div class="card-slot" id="opp-0" onclick="openPicker('opp',0)"><span class="plus">+</span></div>
-            <div class="card-slot" id="opp-1" onclick="openPicker('opp',1)"><span class="plus">+</span></div>
-          </div>
-          <span class="clear-hand" onclick="event.stopPropagation(); clearHand('opp')">clear ×</span>
-          <span class="opp-mode-link" onclick="event.stopPropagation(); switchOppMode('random')">← Random opponents</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Community cards -->
-    <div class="community-section" id="community-section" style="display:none">
-      <div class="community-label">
-        Board cards
-        <span>(optional — add flop, turn, river)</span>
-      </div>
-      <div class="community-slots">
-        <div class="community-slot" id="board-0" onclick="openPicker('board',0)"><span class="plus">+</span></div>
-        <div class="community-slot" id="board-1" onclick="openPicker('board',1)"><span class="plus">+</span></div>
-        <div class="community-slot" id="board-2" onclick="openPicker('board',2)"><span class="plus">+</span></div>
-        <div class="community-slot" id="board-3" onclick="openPicker('board',3)"><span class="plus">+</span></div>
-        <div class="community-slot" id="board-4" onclick="openPicker('board',4)"><span class="plus">+</span></div>
-      </div>
-    </div>
-
-    <div class="divider"><span class="divider-icon">♠</span></div>
-
-    <!-- Calculate button -->
-    <button class="calc-btn" id="calc-btn" onclick="runSim()" disabled>Select both hands to calculate</button>
-
-    <!-- Results -->
-    <div class="results" id="results">
-      <div class="results-header">Equity Analysis</div>
-
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Your Win</div>
-          <div class="stat-val win" id="res-win">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Split Pot</div>
-          <div class="stat-val tie" id="res-tie">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">You Lose</div>
-          <div class="stat-val lose" id="res-lose">—</div>
-        </div>
-      </div>
-
-      <div class="equity-bar-wrap">
-        <div class="equity-bar-labels">
-          <span id="bar-lbl-left">You</span>
-          <span id="bar-lbl-right">Opponent</span>
-        </div>
-        <div class="equity-bar">
-          <div class="bar-win" id="bar-win" style="width:0%"></div>
-          <div class="bar-tie" id="bar-tie" style="width:0%"></div>
-          <div class="bar-lose" id="bar-lose" style="width:0%"></div>
-        </div>
-      </div>
-
-      <div class="breakdown-panel">
-        <div class="breakdown-title">Your winning hand types</div>
-        <div class="breakdown-grid" id="breakdown-grid"></div>
-      </div>
-
-      <div class="sim-note" id="sim-note"></div>
-    </div>
-
-  </div>
-
-  <div class="footer">♠ ♥ ♦ ♣ — Texas Hold'em Hand Calculator</div>
-</div>
-
-<!-- Card picker overlay -->
-<div class="picker-overlay" id="picker-overlay" onclick="closePicker()"></div>
-
-<!-- Card picker bottom sheet -->
-<div class="picker-area" id="picker">
-  <div class="picker-handle"></div>
-  <div class="picker-title" id="picker-title">Select rank</div>
-  <div class="rank-grid" id="rank-grid"></div>
-  <div class="suit-grid" id="suit-grid"></div>
-  <div class="picker-note" id="picker-note"></div>
-</div>
-
-<script>
-// ─── Constants ───────────────────────────────────────────────────────────────
-const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
-const SUITS = ['♠','♥','♦','♣'];
-const SUIT_COLOR = {'♠':'black','♥':'red','♦':'red','♣':'black'};
-const RANK_VAL = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,T:10,J:11,Q:12,K:13,A:14};
-const HAND_NAMES = ['High card','One pair','Two pair','Three of a kind','Straight','Flush','Full house','Four of a kind','Straight flush'];
-
-// ─── State ───────────────────────────────────────────────────────────────────
-let state = {
-  my:    [null, null],
-  opp:   [null, null],
-  board: [null, null, null, null, null],
-  mode:  'preflop',
-  numOpponents: 1
-};
-let picker = { target: null, slot: null, rank: null };
-
-// ─── Opponent mode helpers ──────────────────────────────────────────────────
-function getOppMode() {
-  return state.opp.some(Boolean) ? 'specific' : 'random';
-}
-
-function renderOppPanel() {
-  const mode = getOppMode();
-  const specificSection = document.getElementById('opp-specific-section');
-  const randomSection = document.getElementById('opp-random-section');
-  const label = document.getElementById('opp-label');
-  const vsBadge = document.getElementById('vs-badge');
-
-  if (mode === 'specific') {
-    label.textContent = 'Opponent';
-    specificSection.style.display = 'block';
-    randomSection.style.display = 'none';
-    vsBadge.textContent = 'VS';
-    vsBadge.classList.remove('wide');
-  } else {
-    label.textContent = 'Opponents';
-    specificSection.style.display = 'none';
-    randomSection.style.display = 'block';
-    vsBadge.textContent = 'VS ' + state.numOpponents;
-    if (state.numOpponents > 1) vsBadge.classList.add('wide');
-    else vsBadge.classList.remove('wide');
-    renderOppNumButtons();
-  }
-}
-
-function renderOppNumButtons() {
-  const row = document.getElementById('opp-num-row');
-  row.innerHTML = '';
-  for (let i = 1; i <= 8; i++) {
-    const btn = document.createElement('button');
-    btn.className = 'opp-num-btn' + (i === state.numOpponents ? ' selected' : '');
-    btn.textContent = i;
-    btn.onclick = () => setNumOpponents(i);
-    row.appendChild(btn);
-  }
-}
-
-function setNumOpponents(n) {
-  state.numOpponents = n;
-  renderOppNumButtons();
-  const vsBadge = document.getElementById('vs-badge');
-  vsBadge.textContent = 'VS ' + n;
-  if (n > 1) vsBadge.classList.add('wide');
-  else vsBadge.classList.remove('wide');
-  document.getElementById('results').classList.remove('visible');
-  checkReady();
-}
-
-function switchOppMode(mode) {
-  if (mode === 'random') {
-    state.opp = [null, null];
-    renderAllCards();
-  }
-  renderOppPanel();
-  closePicker();
-  document.getElementById('results').classList.remove('visible');
-  checkReady();
-}
-
-function refreshUI() {
-  renderAllCards();
-  renderOppPanel();
-  checkReady();
-}
-
-// ─── Mode ────────────────────────────────────────────────────────────────────
-function setMode(m) {
-  state.mode = m;
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&m==='preflop')||(i===1&&m==='postflop')));
-  document.getElementById('community-section').style.display = m === 'postflop' ? 'block' : 'none';
-  if (m === 'preflop') {
-    state.board = [null, null, null, null, null];
-  }
-  refreshUI();
-}
-
-// ─── Picker ──────────────────────────────────────────────────────────────────
-function openPicker(target, slot) {
-  picker = { target, slot, rank: null };
-  document.getElementById('picker').classList.add('active');
-  document.getElementById('picker-overlay').classList.add('active');
-  document.getElementById('picker-title').textContent =
-    (target === 'my' ? 'Your card ' : target === 'opp' ? "Opponent's card " : 'Board card ') + (slot + 1) + ' — pick rank';
-  renderRanks();
-  renderSuits();
-  document.getElementById('picker-note').textContent = 'Step 1: choose a rank';
-  document.body.style.overflow = 'hidden';
-}
-
-function closePicker() {
-  document.getElementById('picker').classList.remove('active');
-  document.getElementById('picker-overlay').classList.remove('active');
-  document.body.style.overflow = '';
-}
-
-function getUsedSet(excludeTarget, excludeSlot) {
-  const used = new Set();
-  ['my','opp'].forEach(h => state[h].forEach((c,i) => {
-    if (c && !(h === excludeTarget && i === excludeSlot)) used.add(c.rank + c.suit);
-  }));
-  state.board.forEach((c,i) => {
-    if (c && !('board' === excludeTarget && i === excludeSlot)) used.add(c.rank + c.suit);
-  });
-  return used;
-}
-
-function renderRanks() {
-  const used = getUsedSet(picker.target, picker.slot);
-  const grid = document.getElementById('rank-grid');
-  grid.innerHTML = '';
-  RANKS.forEach(r => {
-    const btn = document.createElement('button');
-    btn.className = 'rank-btn' + (picker.rank === r ? ' selected' : '');
-    btn.textContent = r === 'T' ? '10' : r;
-    const allUsed = SUITS.every(s => used.has(r + s));
-    if (allUsed) btn.disabled = true;
-    btn.onclick = () => { picker.rank = r; renderRanks(); renderSuits(); document.getElementById('picker-note').textContent = 'Step 2: choose a suit'; };
-    grid.appendChild(btn);
-  });
-}
-
-function renderSuits() {
-  const used = getUsedSet(picker.target, picker.slot);
-  const grid = document.getElementById('suit-grid');
-  grid.innerHTML = '';
-  SUITS.forEach(s => {
-    const btn = document.createElement('button');
-    btn.className = 'suit-btn ' + SUIT_COLOR[s] + '-suit';
-    btn.textContent = s;
-    const isUsed = picker.rank && used.has(picker.rank + s);
-    if (isUsed) { btn.disabled = true; }
-    btn.onclick = () => {
-      if (!picker.rank) { document.getElementById('picker-note').textContent = '← Pick a rank first'; return; }
-      const card = { rank: picker.rank, suit: s };
-      if (picker.target === 'board') state.board[picker.slot] = card;
-      else state[picker.target][picker.slot] = card;
-      refreshUI();
-      closePicker();
-      document.getElementById('results').classList.remove('visible');
-    };
-    grid.appendChild(btn);
-  });
-}
-
-// ─── Card rendering ───────────────────────────────────────────────────────────
-function renderCard(el, card, isSmall) {
-  if (!card) {
-    el.className = el.className.replace(/ filled| red-card| black-card/g, '').trim();
-    el.innerHTML = '<span class="plus">+</span>';
-    return;
-  }
-  const color = SUIT_COLOR[card.suit];
-  el.className = el.className.replace(/ filled| red-card| black-card/g, '').trim();
-  el.classList.add('filled', color + '-card');
-  const rankDisplay = card.rank === 'T' ? '10' : card.rank;
-  el.innerHTML = `
-    <div class="card-corner">${rankDisplay}<br>${card.suit}</div>
-    <div class="card-inner">
-      <span class="card-rank">${rankDisplay}</span>
-      <span class="card-suit">${card.suit}</span>
-    </div>
-    <div class="card-corner-br">${rankDisplay}<br>${card.suit}</div>`;
-}
-
-function renderAllCards() {
-  ['my','opp'].forEach(h => state[h].forEach((c,i) => renderCard(document.getElementById(h+'-'+i), c, false)));
-  state.board.forEach((c,i) => renderCard(document.getElementById('board-'+i), c, true));
-}
-
-function clearHand(h) {
-  state[h] = [null, null];
-  closePicker();
-  document.getElementById('results').classList.remove('visible');
-  refreshUI();
-}
-
-function checkReady() {
-  const myReady = state.my.every(Boolean);
-  const oppReady = getOppMode() === 'random' || state.opp.every(Boolean);
-  const ready = myReady && oppReady;
-  const btn = document.getElementById('calc-btn');
-  btn.disabled = !ready;
-  btn.textContent = ready ? 'Calculate equity →' : 'Select your hand to calculate';
-}
-
-// ─── Poker engine ─────────────────────────────────────────────────────────────
-function makeDeck() {
-  const d = [];
-  for (const r of RANKS) for (const s of SUITS) d.push(r + s);
-  return d;
-}
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function rval(c) { return RANK_VAL[c[0]] || parseInt(c[0]); }
-
-function handScore(cards) {
-  const vals = cards.map(rval).sort((a,b) => b-a);
-  const suits = cards.map(c => c[1]);
-  const vc = {};
-  vals.forEach(v => vc[v] = (vc[v]||0)+1);
-  const cnts = Object.values(vc).sort((a,b) => b-a);
-  const flush = suits.every(s => s === suits[0]);
-  const uv = [...new Set(vals)].sort((a,b) => b-a);
-  const straight = uv.length >= 5 && (
-    (uv[0]-uv[4] === 4) ||
-    (JSON.stringify(uv.slice(0,5)) === JSON.stringify([14,5,4,3,2]))
-  );
-  const straightTop = straight ? (uv[0]-uv[4]===4 ? uv[0] : 5) : 0;
-  const sorted = Object.entries(vc).sort((a,b) => b[1]-a[1]||b[0]-a[0]).map(e=>+e[0]);
-  if (flush && straight) return [8, straightTop];
-  if (cnts[0]===4) return [7, ...sorted];
-  if (cnts[0]===3 && cnts[1]===2) return [6, ...sorted];
-  if (flush) return [5, ...vals];
-  if (straight) return [4, straightTop];
-  if (cnts[0]===3) return [3, ...sorted];
-  if (cnts[0]===2 && cnts[1]===2) return [2, ...sorted];
-  if (cnts[0]===2) return [1, ...sorted];
-  return [0, ...vals];
-}
-
-function best5(cards) {
-  let best = null;
-  for (let i = 0; i < cards.length-1; i++)
-    for (let j = i+1; j < cards.length; j++) {
-      const five = cards.filter((_,k) => k!==i && k!==j);
-      const sc = handScore(five);
-      if (!best || cmp(sc, best) > 0) best = sc;
-    }
-  return best;
-}
-
-function cmp(a, b) {
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const d = (a[i]||0) - (b[i]||0);
-    if (d !== 0) return d;
-  }
-  return 0;
-}
-
-// ─── Simulation ───────────────────────────────────────────────────────────────
-function runSim() {
-  const btn = document.getElementById('calc-btn');
-  btn.disabled = true;
-  btn.textContent = 'Simulating…';
-
-  setTimeout(() => {
-    const N = 30000;
-    const isSpecific = getOppMode() === 'specific';
-    const myCards  = state.my.map(c => c.rank + c.suit);
-    const specificOppCards = isSpecific ? state.opp.map(c => c.rank + c.suit) : [];
-    const numOpponents = isSpecific ? 1 : state.numOpponents;
-    const boardCards = state.board.filter(Boolean).map(c => c.rank + c.suit);
-
-    const usedSet = new Set([...myCards, ...boardCards]);
-    if (isSpecific) specificOppCards.forEach(c => usedSet.add(c));
-    const baseDeck = makeDeck().filter(c => !usedSet.has(c));
-    const need = 5 - boardCards.length;
-
-    let wins = 0, ties = 0, losses = 0;
-    const myHandCounts = new Array(9).fill(0);
-
-    for (let i = 0; i < N; i++) {
-      const deck = shuffle([...baseDeck]);
-      const community = [...boardCards, ...deck.slice(0, need)];
-      const myAll  = [...myCards, ...community];
-      const myBest = best5(myAll);
-
-      if (isSpecific) {
-        const oppAll = [...specificOppCards, ...community];
-        const oppBest = best5(oppAll);
-        const r = cmp(myBest, oppBest);
-        if (r > 0) { wins++; myHandCounts[myBest[0]]++; }
-        else if (r < 0) losses++;
-        else ties++;
-      } else {
-        // Multi-opponent: deal random hands from deck
-        let deckIdx = need;
-        let oppBetter = false;
-        let oppEqual = false;
-
-        for (let o = 0; o < numOpponents; o++) {
-          const oppHand = [deck[deckIdx++], deck[deckIdx++]];
-          const oppAll = [...oppHand, ...community];
-          const oppBest = best5(oppAll);
-          const r = cmp(myBest, oppBest);
-          if (r < 0) oppBetter = true;
-          else if (r === 0) oppEqual = true;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>胜率计算器 — 扑克胜率分析</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #09090B;
+            --bg-card: #18181B;
+            --border: #27272A;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --profit: #10B981;
+            --loss: #EF4444;
         }
 
-        if (oppBetter) losses++;
-        else if (oppEqual) ties++;
-        else { wins++; myHandCounts[myBest[0]]++; }
-      }
-    }
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    const wp = (wins/N*100).toFixed(1);
-    const tp = (ties/N*100).toFixed(1);
-    const lp = (losses/N*100).toFixed(1);
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    document.getElementById('res-win').textContent  = wp + '%';
-    document.getElementById('res-tie').textContent  = tp + '%';
-    document.getElementById('res-lose').textContent = lp + '%';
-    document.getElementById('bar-lbl-left').textContent  = 'You ' + wp + '%';
-    const oppLabel = isSpecific ? 'Opp' : numOpponents + ' Opp' + (numOpponents > 1 ? 's' : '');
-    document.getElementById('bar-lbl-right').textContent = lp + '% ' + oppLabel;
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        body { scrollbar-width: none; }
 
-    setTimeout(() => {
-      document.getElementById('bar-win').style.width  = wp + '%';
-      document.getElementById('bar-tie').style.width  = tp + '%';
-      document.getElementById('bar-lose').style.width = lp + '%';
-    }, 50);
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
 
-    // Hand breakdown
-    const grid = document.getElementById('breakdown-grid');
-    grid.innerHTML = '';
-    const maxPct = Math.max(...myHandCounts.map((c,i) => wins > 0 ? c/wins*100 : 0));
-    myHandCounts.map((c,i) => ({ name: HAND_NAMES[i], pct: wins > 0 ? c/wins*100 : 0 }))
-      .filter(x => x.pct > 0.3)
-      .sort((a,b) => b.pct - a.pct)
-      .slice(0, 8)
-      .forEach(x => {
-        const div = document.createElement('div');
-        div.className = 'breakdown-item';
-        div.innerHTML = `
-          <div style="flex:1;min-width:0;">
-            <div class="breakdown-name">${x.name}</div>
-            <div class="mini-bar"><div class="mini-bar-fill" style="width:${(x.pct/maxPct*100).toFixed(1)}%"></div></div>
-          </div>
-          <span class="breakdown-pct">${x.pct.toFixed(1)}%</span>`;
-        grid.appendChild(div);
-      });
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: #18181B;
+            border: 1px solid #27272A;
+            border-radius: 14px;
+            color: #FAFAFA;
+            font-size: 16px;
+            font-family: 'JetBrains Mono', 'Menlo', monospace;
+            transition: all 200ms ease;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: #3F3F46;
+            box-shadow: 0 0 0 3px rgba(63, 63, 70, 0.3);
+        }
+        .input-field::placeholder {
+            color: #52525B;
+        }
 
-    const oppDesc = isSpecific ? '1 specific opponent' : (numOpponents + ' random opponent' + (numOpponents > 1 ? 's' : ''));
-    const boardDesc = boardCards.length > 0 ? (boardCards.length + ' board card' + (boardCards.length > 1 ? 's' : '') + ' locked') : 'random board';
-    document.getElementById('sim-note').textContent = N.toLocaleString() + ' simulations · ' + oppDesc + ' · ' + boardDesc;
-    document.getElementById('results').classList.add('visible');
+        .stat-card {
+            background: #18181B;
+            border: 1px solid #27272A;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            transition: all 300ms ease;
+        }
 
-    btn.disabled = false;
-    btn.textContent = 'Recalculate ↺';
-  }, 20);
-}
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: #FAFAFA;
+            color: #09090B;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 200ms ease;
+        }
+        .btn-primary:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
 
-// ─── Keyboard: Escape to close picker ────────────────────────────────────────
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closePicker();
-});
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
-refreshUI();
-</script>
+        .num-pop {
+            animation: num-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes num-pop {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+    <main class="w-full max-w-md px-4 pt-4 pb-8">
 
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-zinc-100">
+                    <i class="fa-solid fa-calculator mr-2 text-zinc-500" style="font-size:15px;"></i>胜率计算器
+                </h1>
+                <p class="text-xs text-zinc-500 mt-0.5">扑克战绩数据分析</p>
+            </div>
+            <a href="./index.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span class="hidden sm:inline">返回看板</span>
+            </a>
+        </header>
+
+        <!-- Input Section -->
+        <section class="mb-5">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">
+                    <i class="fa-solid fa-pen-to-square mr-1.5"></i>输入数据
+                </p>
+
+                <div class="space-y-4">
+                    <!-- Total Sessions -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">总场次</label>
+                        <input type="number" id="total-sessions" class="input-field" placeholder="0" min="0" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Winning Sessions -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">胜场数</label>
+                        <input type="number" id="win-sessions" class="input-field" placeholder="0" min="0" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Total Profit -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">总盈亏（分）</label>
+                        <input type="number" id="total-profit" class="input-field" placeholder="+/- 输入总积分" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Best Day -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">最佳单日（分）<span class="text-zinc-600 ml-1">可选</span></label>
+                        <input type="number" id="best-day" class="input-field" placeholder="单日最高积分" value="" autocomplete="off">
+                    </div>
+
+                    <!-- Worst Day -->
+                    <div>
+                        <label class="text-sm text-zinc-400 mb-1.5 block">最差单日（分）<span class="text-zinc-600 ml-1">可选</span></label>
+                        <input type="number" id="worst-day" class="input-field" placeholder="单日最低积分" value="" autocomplete="off">
+                    </div>
+                </div>
+
+                <button id="calc-btn" class="btn-primary mt-5">
+                    <i class="fa-solid fa-chart-pie mr-1.5"></i>计算胜率
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="results-section" class="hidden mb-5">
+            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-4">
+                    <i class="fa-solid fa-chart-simple mr-1.5"></i>分析结果
+                </p>
+
+                <!-- Big Win Rate Display -->
+                <div class="text-center mb-5">
+                    <p class="text-xs text-zinc-500 mb-1">胜率</p>
+                    <p id="result-winrate" class="font-mono text-5xl font-bold tracking-tight"></p>
+                    <div id="result-tag" class="mt-2"></div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="stat-card">
+                        <p id="result-win-sessions" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">胜场 / 总场</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-avg" class="font-mono text-xl font-semibold"></p>
+                        <p class="text-xs text-zinc-500 mt-1">场均盈亏</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-best" class="font-mono text-xl font-semibold text-emerald-400"></p>
+                        <p class="text-xs text-zinc-500 mt-1">最佳单日</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-worst" class="font-mono text-xl font-semibold text-red-400"></p>
+                        <p class="text-xs text-zinc-500 mt-1">最差单日</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-profit-factor" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">盈亏比</p>
+                    </div>
+                    <div class="stat-card">
+                        <p id="result-streak" class="font-mono text-xl font-semibold text-zinc-200"></p>
+                        <p class="text-xs text-zinc-500 mt-1">波动评级</p>
+                    </div>
+                </div>
+
+                <!-- Feedback Message -->
+                <div id="result-feedback" class="mt-4 p-4 rounded-xl text-center text-sm font-medium"></div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center text-xs text-zinc-700 pb-4">
+            Powered by 积分看板 · 胜率计算器
+        </footer>
+    </main>
+
+    <script>
+    (function() {
+        const $ = (sel) => document.querySelector(sel);
+
+        const domTotalSessions = $('#total-sessions');
+        const domWinSessions = $('#win-sessions');
+        const domTotalProfit = $('#total-profit');
+        const domBestDay = $('#best-day');
+        const domWorstDay = $('#worst-day');
+        const domCalcBtn = $('#calc-btn');
+        const domResultsSection = $('#results-section');
+        const domResultWinrate = $('#result-winrate');
+        const domResultTag = $('#result-tag');
+        const domResultWinSessions = $('#result-win-sessions');
+        const domResultAvg = $('#result-avg');
+        const domResultBest = $('#result-best');
+        const domResultWorst = $('#result-worst');
+        const domResultProfitFactor = $('#result-profit-factor');
+        const domResultStreak = $('#result-streak');
+        const domResultFeedback = $('#result-feedback');
+
+        function formatPoints(val) {
+            const abs = Math.abs(val);
+            const formatted = abs >= 10000
+                ? (abs / 10000).toFixed(1) + 'w'
+                : abs.toLocaleString('zh-CN');
+            return val > 0 ? `+${formatted}分` : val < 0 ? `-${formatted}分` : '0分';
+        }
+
+        function getWinRateTag(winRate) {
+            if (winRate >= 80) return { text: '碾压级', emoji: '🔥', class: 'bg-amber-400/20 text-amber-400 border border-amber-400/40' };
+            if (winRate >= 65) return { text: '稳定盈利', emoji: '💎', class: 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/40' };
+            if (winRate >= 55) return { text: '小幅盈利', emoji: '📈', class: 'bg-sky-400/20 text-sky-400 border border-sky-400/40' };
+            if (winRate >= 45) return { text: '盈亏平衡', emoji: '⚖️', class: 'bg-zinc-400/20 text-zinc-400 border border-zinc-400/40' };
+            if (winRate >= 35) return { text: '小幅亏损', emoji: '📉', class: 'bg-orange-400/20 text-orange-400 border border-orange-400/40' };
+            if (winRate >= 20) return { text: '持续亏损', emoji: '⚠️', class: 'bg-red-400/20 text-red-400 border border-red-400/40' };
+            return { text: '支付站', emoji: '💸', class: 'bg-red-500/20 text-red-400 border border-red-500/40' };
+        }
+
+        function getVolatilityRating(bestDay, worstDay) {
+            const swing = Math.abs(bestDay) + Math.abs(worstDay);
+            if (swing === 0) return { text: '暂无数据', emoji: '—' };
+            if (swing > 1000) return { text: '极度波动', emoji: '🌪️' };
+            if (swing > 600) return { text: '高度波动', emoji: '🎢' };
+            if (swing > 300) return { text: '中度波动', emoji: '🌊' };
+            if (swing > 100) return { text: '轻度波动', emoji: '💧' };
+            return { text: '平稳运行', emoji: '🛶' };
+        }
+
+        function getFeedback(winRate, avgPerSession, totalProfit) {
+            if (winRate >= 70 && totalProfit > 0) {
+                return { text: '你是牌桌上的王者！继续保持这种统治力 👑', class: 'bg-amber-400/10 text-amber-300 border border-amber-400/30' };
+            }
+            if (winRate >= 55 && totalProfit > 0) {
+                return { text: '稳定盈利的节奏，持续下去就能稳步增长 📈', class: 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/30' };
+            }
+            if (winRate >= 45 && totalProfit > 0) {
+                return { text: '微利也是利，优化策略可以提升更多 💪', class: 'bg-sky-400/10 text-sky-300 border border-sky-400/30' };
+            }
+            if (winRate >= 45) {
+                return { text: '在盈亏线上挣扎，控制回撤是关键 🎯', class: 'bg-zinc-400/10 text-zinc-300 border border-zinc-400/30' };
+            }
+            if (winRate >= 30) {
+                return { text: '胜率偏低，复盘研究对手策略可能会有帮助 📚', class: 'bg-orange-400/10 text-orange-300 border border-orange-400/30' };
+            }
+            return { text: '今天你是慈善家！调整策略，明天会更好 💪', class: 'bg-red-400/10 text-red-300 border border-red-400/30' };
+        }
+
+        function calculate() {
+            const totalSessions = parseInt(domTotalSessions.value) || 0;
+            const winSessions = parseInt(domWinSessions.value) || 0;
+            const totalProfit = parseInt(domTotalProfit.value) || 0;
+            const bestDay = parseInt(domBestDay.value) || 0;
+            const worstDay = parseInt(domWorstDay.value) || 0;
+
+            if (totalSessions <= 0) {
+                shakeInput(domTotalSessions);
+                return;
+            }
+
+            if (winSessions > totalSessions) {
+                shakeInput(domWinSessions);
+                return;
+            }
+
+            // Calculations
+            const winRate = Math.round((winSessions / totalSessions) * 100);
+            const avgPerSession = Math.round(totalProfit / totalSessions);
+            const profitFactor = bestDay > 0 && worstDay < 0
+                ? (Math.abs(bestDay / worstDay)).toFixed(2)
+                : '—';
+
+            const tag = getWinRateTag(winRate);
+            const volatility = getVolatilityRating(bestDay, worstDay);
+            const feedback = getFeedback(winRate, avgPerSession, totalProfit);
+
+            // Render results
+            domResultWinrate.textContent = winRate + '%';
+            domResultWinrate.className = 'font-mono text-5xl font-bold tracking-tight num-pop ' +
+                (winRate >= 50 ? 'text-emerald-400' : 'text-red-400');
+
+            domResultTag.innerHTML = `<span class="tag-chip ${tag.class}">${tag.emoji} ${tag.text}</span>`;
+
+            domResultWinSessions.textContent = `${winSessions} / ${totalSessions}`;
+            domResultAvg.textContent = formatPoints(avgPerSession);
+            domResultAvg.className = 'font-mono text-xl font-semibold num-pop ' +
+                (avgPerSession >= 0 ? 'text-emerald-400' : 'text-red-400');
+
+            domResultBest.textContent = bestDay !== 0 ? formatPoints(bestDay) : '—';
+            domResultWorst.textContent = worstDay !== 0 ? formatPoints(worstDay) : '—';
+            domResultProfitFactor.textContent = profitFactor;
+            domResultStreak.innerHTML = `${volatility.emoji} ${volatility.text}`;
+
+            domResultFeedback.textContent = feedback.text;
+            domResultFeedback.className = 'mt-4 p-4 rounded-xl text-center text-sm font-medium ' + feedback.class;
+
+            // Show results
+            domResultsSection.classList.remove('hidden');
+            domResultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function shakeInput(el) {
+            el.style.borderColor = '#EF4444';
+            el.style.animation = 'none';
+            el.offsetHeight; // force reflow
+            el.style.animation = 'shake 400ms ease';
+            setTimeout(() => {
+                el.style.borderColor = '#27272A';
+                el.style.animation = '';
+            }, 500);
+            el.focus();
+        }
+
+        // Event Listeners
+        domCalcBtn.addEventListener('click', calculate);
+
+        // Enter key triggers calculation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                calculate();
+            }
+        });
+
+        // Auto-compute on input change (debounced)
+        let calcTimeout;
+        document.querySelectorAll('.input-field').forEach(input => {
+            input.addEventListener('input', () => {
+                clearTimeout(calcTimeout);
+                calcTimeout = setTimeout(calculate, 600);
+            });
+        });
+
+        // Add shake animation
+        const shakeStyle = document.createElement('style');
+        shakeStyle.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-6px); }
+                50% { transform: translateX(6px); }
+                75% { transform: translateX(-4px); }
+            }
+        `;
+        document.head.appendChild(shakeStyle);
+    })();
+    </script>
 </body>
 </html>
