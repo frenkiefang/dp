@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#09090B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>积分看板 — 每日积分追踪</title>
+    <title>积分看板</title>
 
     <!-- Fonts: Inter (UI) + JetBrains Mono (numbers) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -320,7 +320,6 @@
                     <i class="fa-solid fa-chart-line mr-2 text-zinc-500" style="font-size:15px;"></i>积分看板
                 </h1>
                 <p class="text-xs text-zinc-500 mt-0.5">
-                    每日积分追踪 ·
                     <span id="update-date" class="text-zinc-600">加载中</span>
                 </p>
             </div>
@@ -1319,67 +1318,39 @@
             }
 
             // ═══ 少场次玩家 ══════════════════════════
-            if (gameDays <= 5) {
-                const fewGamePool = avgPerDay > 300
-                    ? [{ tag: '摸鱼大师', emoji: '🎣', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
-                       { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' }]
-                    : avgPerDay > -400
-                    ? [{ tag: '石头人', emoji: '🪨', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
-                       { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
-                       { tag: '摸鱼大师', emoji: '🎣', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' }]
-                    : [{ tag: '神秘失踪人口', emoji: '🫥', color: '#EF4444', bg: '#EF444420', border: '#EF444440' },
-                       { tag: '支付站', emoji: '💸', color: '#EF4444', bg: '#EF444420', border: '#EF444440' }];
-                return pickTag(playerName, fewGamePool);
+            if (gameDays <= 3) {
+                return { tag: '神秘失踪人口', emoji: '🫥', color: '#EF4444', bg: '#EF444420', border: '#EF444440' };    
+
             }
 
             // ═══ 日均盈亏分档（基于真实数据：-810 ~ +707） ═══
 
             // >+700/天 顶端
             if (avgPerDay > 700) {
-                return pickTag(playerName, [
-                    { tag: '吸金兽', emoji: '🧲', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
-                    { tag: '人形印钞机', emoji: '🖨️', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' },
-                ]);
+                return { tag: '人形印钞机', emoji: '🖨️', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' };
+;
             }
 
             // +400~700/天 高端盈利
-            if (avgPerDay > 400) {
+            if (avgPerDay > 300) {
                 return pickTag(playerName, [
                     { tag: '扑克猎手', emoji: '🔫', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
-                    { tag: '推土机', emoji: '🚜', color: '#A78BFA', bg: '#A78BFA20', border: '#A78BFA40' },
                     { tag: '沉默杀手', emoji: '🥷', color: '#A78BFA', bg: '#A78BFA20', border: '#A78BFA40' },
                 ]);
             }
 
-            // +150~400/天 稳盈
-            if (avgPerDay > 150) {
-                return pickTag(playerName, [
-                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                    { tag: '扑克猎手', emoji: '🔫', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
-                    { tag: '吸金兽', emoji: '🧲', color: '#A3E635', bg: '#A3E63520', border: '#A3E63540' },
-                ]);
-            }
-
-            // +40~150/天 小盈
-            if (avgPerDay > 40) {
-                return pickTag(playerName, [
-                    { tag: '小赢当赢', emoji: '😎', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                    { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                ]);
-            }
-
-            // 0~+40/天 微盈
+            // +0~300/天 稳盈
             if (avgPerDay > 0) {
                 return pickTag(playerName, [
+                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
                     { tag: '小赢当赢', emoji: '😎', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                    { tag: '黑马选手', emoji: '🐎', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
                     { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
                 ]);
             }
 
-            // -40~0/天 微亏
-            if (avgPerDay > -40) {
+
+            // -100~0/天 微亏
+            if (avgPerDay > -100) {
                 return pickTag(playerName, [
                     { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
                     { tag: '石头人', emoji: '🪨', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
@@ -1387,38 +1358,19 @@
                 ]);
             }
 
-            // -150~-40/天 小亏
-            if (avgPerDay > -150) {
+            // -300~-100/天 中亏
+            if (avgPerDay > -300) {
                 return pickTag(playerName, [
-                    { tag: '紧弱鱼', emoji: '🐟', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
-                    { tag: '铁头功', emoji: '🤯', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
-                    { tag: '跟注站站长', emoji: '📞', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
-                ]);
-            }
-
-            // -400~-150/天 中亏
-            if (avgPerDay > -400) {
-                return pickTag(playerName, [
-                    { tag: '铁头功', emoji: '🤯', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
+                    { tag: '散财童子', emoji: '💰', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
                     { tag: '过山车之王', emoji: '🎢', color: '#F472B6', bg: '#F472B620', border: '#F472B640' },
                     { tag: '悬崖边上', emoji: '🧗', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
                 ]);
             }
 
-            // -800~-400/天 大亏
-            if (avgPerDay > -800) {
-                return pickTag(playerName, [
-                    { tag: '悬崖边上', emoji: '🧗', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
-                    { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
-                    { tag: '跟注站站长', emoji: '📞', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
-                ]);
-            }
-
-            // <-800/天 巨亏
+            // <-300/天 巨亏
             return pickTag(playerName, [
                 { tag: '散财童子', emoji: '💰', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
                 { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
-                { tag: '支付站', emoji: '💸', color: '#EF4444', bg: '#EF444420', border: '#EF444440' },
             ]);
         }
 
@@ -1482,7 +1434,6 @@
                     <p class="text-2xl font-mono font-bold mt-1 tracking-tight ${totalScore >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${formatPoints(totalScore)}
                     </p>
-                    <p class="text-xs text-zinc-500 mt-0.5">周期总积分 · 排名 <span class="text-zinc-300 font-semibold">#${rank}/${totalPlayers}</span></p>
                 </div>
 
                 <!-- Fluctuation Chart -->
