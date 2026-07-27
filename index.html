@@ -328,8 +328,9 @@
                     <i class="fa-solid fa-calculator"></i>
                     <span>胜率计算器</span>
                 </a>
-                <a href="./admin.html" class="text-zinc-600 hover:text-zinc-400 transition-colors" title="数据管理">
+                <a href="./admin.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="数据管理">
                     <i class="fa-solid fa-pen-to-square"></i>
+                    <span>管理</span>
                 </a>
                 <span id="status-dot" class="status-dot offline"></span>
                 <span id="status-text">检测中</span>
@@ -1260,9 +1261,23 @@
                 const row = document.createElement('div');
                 row.className = 'lb-row dynamic border-b border-zinc-800/50';
                 row.onclick = () => openBottomSheet(player.name, player.total);
+
+                // 选手标签
+                const pRows = filteredData.filter(r => r.player === player.name);
+                const dMap = {};
+                pRows.forEach(r => { const k = getDateKey(r.play_date); if (!dMap[k]) dMap[k] = 0; dMap[k] += r.value; });
+                const dayEntries = Object.entries(dMap);
+                const gDays = dayEntries.length;
+                const wDays = dayEntries.filter(([,v]) => v > 0).length;
+                const wRate = gDays > 0 ? Math.round((wDays / gDays) * 100) : 0;
+                const aPerDay = gDays > 0 ? Math.round(player.total / gDays) : 0;
+                const vol = computePlayerVolatility(player.name);
+                const pTag = getPlayerTag(player.name, index + 1, sorted.length, wRate, vol, player.total, gDays, aPerDay);
+                const tagHtml = `<span class="player-tag-badge" style="background:${pTag.bg};border:1px solid ${pTag.border};color:${pTag.color};"><span class="tag-emoji">${pTag.emoji}</span>${pTag.tag}</span>`;
+
                 row.innerHTML = `
                     <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
-                    <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)}</span>
+                    <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)} ${tagHtml}</span>
                     <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${formatPoints(player.total)}
                     </span>
