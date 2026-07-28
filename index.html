@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -11,7 +11,7 @@
     <!-- Fonts: Inter (UI) + JetBrains Mono (numbers) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=LXGW+WenKai+Mono+TC:wght@400;700&family=Playfair+Display+SC:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
 
     <!-- FontAwesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -30,7 +30,7 @@
                 extend: {
                     fontFamily: {
                         'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                        'mono': ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                        'mono': ['Special Elite', 'JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
                     },
                 }
             }
@@ -40,15 +40,42 @@
     <style>
         /* ── Base ── */
         :root {
+            --bg-primary: #F5F0E8;
+            --bg-card: #F5F0E8;
+            --bg-deeper: #EDE4D4;
+            --border: #D4CFC6;
+            --border-light: #BFBBB3;
+            --text-primary: #2E2A24;
+            --text-secondary: #4A4540;
+            --text-muted: #8C8C8C;
+            --ink-ghost: #BFBBB3;
+            --accent: #0047AB;
+            --accent-glow: rgba(0,71,171,0.08);
+            --profit: #0047AB;
+            --loss: #DC2F2F;
+            --sheet-transition: 350ms cubic-bezier(0.32, 0.72, 0, 1);
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+            --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
+            --font-mono: 'Special Elite', 'Space Mono', monospace;
+        }
+
+        [data-theme="dark"] {
             --bg-primary: #09090B;
             --bg-card: #18181B;
+            --bg-deeper: #09090B;
             --border: #27272A;
+            --border-light: #3F3F46;
             --text-primary: #FAFAFA;
             --text-secondary: #A1A1AA;
             --text-muted: #71717A;
+            --ink-ghost: #52525B;
+            --accent: #34D399;
+            --accent-glow: rgba(52,211,153,0.12);
             --profit: #10B981;
             --loss: #EF4444;
-            --sheet-transition: 350ms cubic-bezier(0.32, 0.72, 0, 1);
+            --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
         }
 
         * {
@@ -61,8 +88,17 @@
             height: 100%;
             overflow-x: hidden;
             background: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+        /* ── Paper grain (light theme only) ── */
+        [data-theme="light"] html::before {
+            content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        [data-theme="light"] html {
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.008) 2px, rgba(0,0,0,0.008) 4px), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.005) 3px, rgba(0,0,0,0.005) 6px);
+        }
+        color: var(--text-primary);
+            font-family: var(--font-body);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -71,6 +107,44 @@
         ::-webkit-scrollbar { width: 0; height: 0; }
         body { scrollbar-width: none; }
 
+        
+        /* ── Light theme Tailwind overrides ── */
+        [data-theme="light"] .bg-zinc-900, [data-theme="light"] .bg-zinc-800 { background-color: var(--bg-card) !important; }
+        [data-theme="light"] .bg-zinc-950 { background-color: var(--bg-deeper) !important; }
+        [data-theme="light"] .border-zinc-800, [data-theme="light"] .border-zinc-800\/50, [data-theme="light"] .border-zinc-800\/30 { border-color: var(--border) !important; }
+        [data-theme="light"] .border-zinc-700 { border-color: var(--border-light) !important; }
+        [data-theme="light"] .text-zinc-100 { color: var(--text-primary) !important; }
+        [data-theme="light"] .text-zinc-200, [data-theme="light"] .text-zinc-300, [data-theme="light"] .text-zinc-400 { color: var(--text-secondary) !important; }
+        [data-theme="light"] .text-zinc-500 { color: var(--text-muted) !important; }
+        [data-theme="light"] .text-zinc-600, [data-theme="light"] .text-zinc-700 { color: var(--ink-ghost) !important; }
+        [data-theme="light"] .text-emerald-400 { color: var(--profit) !important; }
+        [data-theme="light"] .text-red-400 { color: var(--loss) !important; }
+        [data-theme="light"] .bg-red-950\/40 { background-color: rgba(220,47,47,0.06) !important; }
+        [data-theme="light"] .border-red-900\/60 { border-color: rgba(220,47,47,0.2) !important; }
+        [data-theme="light"] .bg-zinc-800\/40 { background-color: rgba(0,0,0,0.03) !important; }
+        [data-theme="light"] .from-zinc-800, [data-theme="light"] .to-zinc-800,
+        [data-theme="light"] .hover\:bg-zinc-700:hover { background-color: var(--border) !important; }
+        [data-theme="light"] .hover\:border-zinc-600:hover { border-color: var(--border-light) !important; }
+        [data-theme="light"] .hover\:text-zinc-100:hover { color: var(--text-primary) !important; }
+        [data-theme="light"] .hover\:text-zinc-300:hover { color: var(--text-secondary) !important; }
+        [data-theme="light"] .hover\:text-zinc-400:hover { color: var(--text-secondary) !important; }
+        [data-theme="light"] .active\:bg-zinc-800:active { background-color: var(--border) !important; }
+        [data-theme="light"] .active\:bg-zinc-700:active { background-color: var(--border-light) !important; }
+        [data-theme="light"] .active\:text-zinc-200:active { color: var(--text-primary) !important; }
+        /* skeleton */
+        [data-theme="light"] .skeleton { background: linear-gradient(90deg, #EDE4D4 25%, #D4CFC6 50%, #EDE4D4 75%) !important; }
+        /* toast */
+        [data-theme="light"] .toast.success { background: rgba(0,71,171,0.08); color: #0047AB; border: 1px solid rgba(0,71,171,0.2); }
+        [data-theme="light"] .toast.error { background: rgba(220,47,47,0.06); color: #DC2F2F; border: 1px solid rgba(220,47,47,0.2); }
+        /* sheet */
+        [data-theme="light"] .sheet-panel { box-shadow: 0 -4px 32px rgba(0,0,0,0.08); }
+        [data-theme="light"] .sheet-overlay { background: rgba(245,240,232,0.7); }
+        /* mode toggle */
+        [data-theme="light"] .mode-toggle { background: var(--bg-deeper); border-color: var(--border); }
+        [data-theme="light"] .mode-toggle button.active { background: rgba(0,71,171,0.08); color: var(--accent); box-shadow: none; }
+        /* player pill */
+        [data-theme="light"] .player-pill { border-color: var(--border); color: var(--text-secondary); }
+        [data-theme="light"] .player-pill.active { background: rgba(0,71,171,0.06); color: var(--accent); border-color: var(--accent); }
         /* ── Skeleton Pulse ── */
         .skeleton {
             background: linear-gradient(90deg, #18181B 25%, #27272A 50%, #18181B 75%);
@@ -262,22 +336,17 @@
             100% { transform: scale(1); }
         }
 
+        /* ── Hero Number ── */
+        #hero-score { font-family: 'Special Elite', 'Space Mono', monospace !important; }
+        .hero-number { font-family: 'Special Elite', 'Space Mono', monospace; }
+
         /* ── Chart container ── */
         #chart {
             min-height: 300px;
         }
 
         /* ── Player Tag Badge ── */
-        .player-tag-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 10px;
-            border-radius: 9999px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-            animation: tag-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        .player-tag-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.01em; border: 0.5px solid currentColor; animation: tag-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .player-tag-badge .tag-emoji {
             font-size: 13px;
@@ -294,6 +363,10 @@
             padding: 12px 8px 4px;
             margin: 8px 0 16px;
             border: 1px solid #27272A;
+        }
+        [data-theme="light"] .detail-chart-container {
+            background: var(--bg-deeper);
+            border-color: var(--border);
         }
         /* Override ApexCharts default tooltip wrapper — remove white border */
         .apexcharts-tooltip {
@@ -323,16 +396,17 @@
                     <span id="update-date" class="text-zinc-600">加载中</span>
                 </p>
             </div>
-            <div id="connection-indicator" class="flex items-center gap-3 text-xs text-zinc-500">
-                <a href="./calc.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="胜率计算器">
+            <div id="connection-indicator" class="flex items-center gap-1.5 text-xs text-zinc-500">
+                <a href="./calc.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="胜率计算器">
                     <i class="fa-solid fa-calculator"></i>
-                    <span>胜率计算器</span>
+                    <span class="hidden sm:inline">胜率计算器</span><span class="sm:hidden">计算器</span>
                 </a>
-                <a href="./admin.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="数据管理">
+                <a href="./admin.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="数据管理">
                     <i class="fa-solid fa-pen-to-square"></i>
                     <span>管理</span>
                 </a>
-                <span id="status-dot" class="status-dot offline"></span>
+                <button id="theme-toggle" class="flex items-center gap-1 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="切换主题"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                `<span id="status-dot" class="status-dot offline"></span>
                 <span id="status-text">检测中</span>
             </div>
         </header>
@@ -433,7 +507,7 @@
 
                 <div class="relative">
                     <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest mb-3">
-                        <i class="fa-regular fa-calendar mr-1.5"></i>周期内积分
+                        <i class="fa-regular fa-calendar mr-1.5"></i>周期积分
                     </p>
 
                     <!-- Skeleton -->
@@ -445,7 +519,7 @@
                     <!-- Content -->
                     <div id="hero-content" class="hidden">
                         <p id="hero-player" class="text-xl font-semibold text-zinc-100 mb-1 truncate">—</p>
-                        <p id="hero-score" class="font-mono text-4xl font-bold tracking-tight">0分</p>
+                        <p id="hero-score" class="font-mono text-4xl font-bold tracking-tight">0pts</p>
                         <p id="hero-period" class="text-xs text-zinc-500 mt-2">全时段统计</p>
                     </div>
 
@@ -467,8 +541,8 @@
                         <i class="fa-solid fa-chart-simple mr-1.5"></i>趋势
                     </p>
                     <div class="mode-toggle" id="mode-toggle">
-                        <button id="btn-cumulative" class="active" data-mode="cumulative">累积积分</button>
-                        <button id="btn-daily" data-mode="daily">单日积分</button>
+                        <button id="btn-cumulative" class="active" data-mode="cumulative">累积PTS</button>
+                        <button id="btn-daily" data-mode="daily">单日PTS</button>
                     </div>
                 </div>
 
@@ -489,7 +563,7 @@
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div class="px-4 py-3.5 border-b border-zinc-800 flex items-center justify-between">
                     <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest">
-                        <i class="fa-solid fa-trophy mr-1.5"></i>龙虎榜
+                        <i class="fa-solid fa-trophy mr-1.5"></i>排行榜
                     </p>
                     <span id="lb-count" class="text-xs text-zinc-600"></span>
                 </div>
@@ -618,23 +692,23 @@
         //  UTILITY FUNCTIONS
         // ──────────────────────────────────────────────
         function formatPoints(val) {
-            if (val === 0) return '0分';
+            if (val === 0) return '0 pts';
             const abs = Math.abs(val);
             const formatted = abs >= 10000
-                ? (abs / 10000).toFixed(1) + 'w'
+                ? (abs / 1000).toFixed(1) + 'k'
                 : abs.toLocaleString('zh-CN');
-            return val > 0 ? `+${formatted}分` : `-${formatted}分`;
+            return val > 0 ? `+${formatted} pts` : `-${formatted} pts`;
         }
 
         function formatPointsShort(val) {
-            if (val === 0) return '0分';
+            if (val === 0) return '0 pts';
             const abs = Math.abs(val);
-            if (abs >= 10000) return (val > 0 ? '+' : '-') + (abs / 10000).toFixed(1) + 'w分';
-            return (val > 0 ? '+' : '-') + abs.toLocaleString('zh-CN') + '分';
+            if (abs >= 10000) return (val > 0 ? '+' : '-') + (abs / 1000).toFixed(1) + 'k pts';
+            return (val > 0 ? '+' : '-') + abs.toLocaleString('zh-CN') + ' pts';
         }
 
         function formatNumber(val) {
-            if (val >= 10000) return (val / 10000).toFixed(1) + 'w';
+            if (val >= 10000) return (val / 1000).toFixed(1) + 'k';
             return val.toLocaleString('zh-CN');
         }
 
@@ -942,7 +1016,7 @@
                         speed: 600,
                         animateGradually: { enabled: true, delay: 80 },
                     },
-                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    fontFamily: 'Special Elite, Inter, system-ui, sans-serif',
                     events: {
                         legendClick: function(chartContext, seriesIndex, config) {
                             // We handle toggling via pills instead
@@ -972,7 +1046,7 @@
                     max: 0.6,
                     tickAmount: 0,
                     labels: {
-                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Inter, sans-serif' },
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Special Elite, Inter, sans-serif' },
                         rotate: 0,
                         hideOverlappingLabels: true,
                         formatter: (val) => {
@@ -997,10 +1071,10 @@
                 },
                 yaxis: {
                     labels: {
-                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'JetBrains Mono, monospace' },
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Special Elite, JetBrains Mono, monospace' },
                         formatter: (val) => {
-                            if (Math.abs(val) >= 10000) return (val / 10000).toFixed(1) + 'w';
-                            return val + '分';
+                            if (Math.abs(val) >= 10000) return (val / 1000).toFixed(1) + 'k';
+                            return val + ' pts';
                         },
                     },
                     forceNiceScale: true,
@@ -1030,15 +1104,25 @@
                         // sort descending by value
                         items.sort((a, b) => b.value - a.value);
 
-                        let html = '<div style="background:rgba(24,24,27,0.95);border-radius:12px;padding:10px 14px;font-family:Inter,sans-serif;min-width:130px;box-shadow:0 4px 16px rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">';
-                        html += '<div style="color:#A1A1AA;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(63,63,70,0.5);">' + dateStr + '</div>';
+                        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                        const bg = isLight ? 'rgba(245,240,232,0.97)' : 'rgba(24,24,27,0.95)';
+                        const labelColor = isLight ? '#4A4540' : '#A1A1AA';
+                        const borderColor = isLight ? 'rgba(212,207,198,0.6)' : 'rgba(63,63,70,0.5)';
+                        const shadow = isLight ? '0 4px 16px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.5)';
+                        const font = isLight ? "'Special Elite', 'Space Mono', monospace" : 'Inter, sans-serif';
+                        const numFont = isLight ? "'Special Elite', 'Space Mono', monospace" : 'JetBrains Mono, monospace';
+                        const profitColor = isLight ? '#0047AB' : '#10B981';
+                        const lossColor = isLight ? '#DC2F2F' : '#EF4444';
+                        const valColorFn = (v) => v >= 0 ? profitColor : lossColor;
+
+                        let html = '<div style="background:' + bg + ';border-radius:12px;padding:10px 14px;font-family:' + font + ';min-width:130px;box-shadow:' + shadow + ';backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">';
+                        html += '<div style="color:' + labelColor + ';font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid ' + borderColor + ';">' + dateStr + '</div>';
                         items.forEach(item => {
-                            const colorClass = item.value >= 0 ? '#10B981' : '#EF4444';
                             html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;gap:16px;">';
-                            html += '<span style="display:flex;align-items:center;gap:6px;color:#A1A1AA;font-size:12px;">';
+                            html += '<span style="display:flex;align-items:center;gap:6px;color:' + labelColor + ';font-size:12px;">';
                             html += '<span style="width:8px;height:8px;border-radius:50%;background:' + item.color + ';display:inline-block;flex-shrink:0;"></span>';
                             html += item.name + '</span>';
-                            html += '<span style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;color:' + colorClass + ';">' + formatPoints(item.value) + '</span>';
+                            html += '<span style="font-family:' + numFont + ';font-size:12px;font-weight:600;color:' + valColorFn(item.value) + ';">' + formatPoints(item.value) + '</span>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -1219,7 +1303,7 @@
                     <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
                     <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)}</span>
                     <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-                        ${player.total >= 0 ? '+' : ''}${player.total}分
+                        ${formatPoints(player.total)}
                     </span>
                 `;
                 fragment.appendChild(row);
@@ -1527,11 +1611,11 @@
                         easing: 'easeinout',
                         speed: 500,
                     },
-                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    fontFamily: 'Special Elite, Inter, system-ui, sans-serif',
                 },
                 colors: values.map(v => v >= 0 ? '#10B981' : '#EF4444'),
                 series: [{
-                    name: '单日积分',
+                    name: '单日PTS',
                     data: values.map((v, i) => ({ x: i, y: v })),
                 }],
                 plotOptions: {
@@ -1554,7 +1638,7 @@
                     max: dates.length > 0 ? dates.length - 0.5 : 0,
                     tickAmount: dates.length - 1,
                     labels: {
-                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Inter, sans-serif' },
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Special Elite, Inter, sans-serif' },
                         formatter: (val) => {
                             const idx = Math.round(val);
                             if (idx < 0 || idx >= dates.length) return '';
@@ -1574,9 +1658,9 @@
                 },
                 yaxis: {
                     labels: {
-                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'JetBrains Mono, monospace' },
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Special Elite, JetBrains Mono, monospace' },
                         formatter: (val) => {
-                            if (Math.abs(val) >= 10000) return (val / 10000).toFixed(1) + 'w';
+                            if (Math.abs(val) >= 10000) return (val / 1000).toFixed(1) + 'k';
                             return Math.round(val);
                         },
                     },
@@ -1586,11 +1670,18 @@
                         if (dataPointIndex == null || dataPointIndex < 0) return '';
                         const dateStr = dates[dataPointIndex] || '';
                         const val = w.globals.series[0][dataPointIndex];
-                        const valColor = val >= 0 ? '#10B981' : '#EF4444';
-                        return `<div style="background:rgba(24,24,27,0.95);border-radius:10px;padding:8px 12px;font-family:Inter,sans-serif;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.5);">
-                            <div style="color:#A1A1AA;margin-bottom:4px;">${dateStr}</div>
-                            <div style="font-weight:600;color:${valColor};">${formatPoints(val)}</div>
-                        </div>`;
+                        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                        const bg = isLight ? 'rgba(245,240,232,0.97)' : 'rgba(24,24,27,0.95)';
+                        const labelColor = isLight ? '#4A4540' : '#A1A1AA';
+                        const shadow = isLight ? '0 4px 16px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.5)';
+                        const font = isLight ? "'Special Elite', 'Space Mono', monospace" : 'Inter, sans-serif';
+                        const profitColor = isLight ? '#0047AB' : '#10B981';
+                        const lossColor = isLight ? '#DC2F2F' : '#EF4444';
+                        const valColor = val >= 0 ? profitColor : lossColor;
+                        return '<div style="background:' + bg + ';border-radius:10px;padding:8px 12px;font-family:' + font + ';font-size:11px;box-shadow:' + shadow + ';">'
+                            + '<div style="color:' + labelColor + ';margin-bottom:4px;">' + dateStr + '</div>'
+                            + '<div style="font-weight:600;color:' + valColor + ';">' + formatPoints(val) + '</div>'
+                            + '</div>';
                     },
                 },
                 legend: { show: false },
@@ -1875,6 +1966,19 @@
             getSortedPlayers,
         };
     })();
+    
+        // ── Theme Toggle ──
+        (function() {
+            const btn = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            const saved = localStorage.getItem('dp-theme') || 'light';
+            html.setAttribute('data-theme', saved);
+            btn.addEventListener('click', () => {
+                const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('dp-theme', next);
+            });
+        })();
     </script>
 </body>
 </html>
