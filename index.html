@@ -75,7 +75,11 @@
             --loss: #EF4444;
             --font-body: 'Inter', system-ui, -apple-system, sans-serif;
             --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-mono: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+            --font-mono: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        [data-theme="dark"] .font-mono {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
         }
 
         * {
@@ -337,8 +341,8 @@
         }
 
         /* ── Hero Number ── */
-        #hero-score { font-family: 'Special Elite', 'Space Mono', monospace !important; }
-        .hero-number { font-family: 'Special Elite', 'Space Mono', monospace; }
+        #hero-score { font-family: var(--font-mono) !important; }
+        .hero-number { font-family: var(--font-mono); }
 
         /* ── Chart container ── */
         #chart {
@@ -399,14 +403,14 @@
             <div id="connection-indicator" class="flex items-center gap-1.5 text-xs text-zinc-500">
                 <a href="./calc.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="胜率计算器">
                     <i class="fa-solid fa-calculator"></i>
-                    <span class="hidden sm:inline">胜率计算器</span><span class="sm:hidden">计算器</span>
+                    <span>胜率计算器</span>
                 </a>
                 <a href="./admin.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="数据管理">
                     <i class="fa-solid fa-pen-to-square"></i>
                     <span>管理</span>
                 </a>
                 <button id="theme-toggle" class="flex items-center gap-1 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="切换主题"><i class="fa-solid fa-circle-half-stroke"></i></button>
-                `<span id="status-dot" class="status-dot offline"></span>
+                <span id="status-dot" class="status-dot offline" style="display:none"></span>
                 <span id="status-text">检测中</span>
             </div>
         </header>
@@ -1016,7 +1020,7 @@
                         speed: 600,
                         animateGradually: { enabled: true, delay: 80 },
                     },
-                    fontFamily: 'Special Elite, Inter, system-ui, sans-serif',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                     events: {
                         legendClick: function(chartContext, seriesIndex, config) {
                             // We handle toggling via pills instead
@@ -1046,7 +1050,7 @@
                     max: 0.6,
                     tickAmount: 0,
                     labels: {
-                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Special Elite, Inter, sans-serif' },
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
                         rotate: 0,
                         hideOverlappingLabels: true,
                         formatter: (val) => {
@@ -1071,7 +1075,7 @@
                 },
                 yaxis: {
                     labels: {
-                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Special Elite, JetBrains Mono, monospace' },
+                        style: { colors: '#71717A', fontSize: '11px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
                         formatter: (val) => {
                             if (Math.abs(val) >= 10000) return (val / 1000).toFixed(1) + 'k';
                             return val + ' pts';
@@ -1110,7 +1114,7 @@
                         const borderColor = isLight ? 'rgba(212,207,198,0.6)' : 'rgba(63,63,70,0.5)';
                         const shadow = isLight ? '0 4px 16px rgba(0,0,0,0.08)' : '0 4px 16px rgba(0,0,0,0.5)';
                         const font = isLight ? "'Special Elite', 'Space Mono', monospace" : 'Inter, sans-serif';
-                        const numFont = isLight ? "'Special Elite', 'Space Mono', monospace" : 'JetBrains Mono, monospace';
+                        const numFont = isLight ? "'Special Elite', 'Space Mono', monospace" : 'Inter, sans-serif';
                         const profitColor = isLight ? '#0047AB' : '#10B981';
                         const lossColor = isLight ? '#DC2F2F' : '#EF4444';
                         const valColorFn = (v) => v >= 0 ? profitColor : lossColor;
@@ -1611,7 +1615,7 @@
                         easing: 'easeinout',
                         speed: 500,
                     },
-                    fontFamily: 'Special Elite, Inter, system-ui, sans-serif',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                 },
                 colors: values.map(v => v >= 0 ? '#10B981' : '#EF4444'),
                 series: [{
@@ -1638,7 +1642,7 @@
                     max: dates.length > 0 ? dates.length - 0.5 : 0,
                     tickAmount: dates.length - 1,
                     labels: {
-                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Special Elite, Inter, sans-serif' },
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
                         formatter: (val) => {
                             const idx = Math.round(val);
                             if (idx < 0 || idx >= dates.length) return '';
@@ -1658,7 +1662,7 @@
                 },
                 yaxis: {
                     labels: {
-                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Special Elite, JetBrains Mono, monospace' },
+                        style: { colors: '#71717A', fontSize: '10px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
                         formatter: (val) => {
                             if (Math.abs(val) >= 10000) return (val / 1000).toFixed(1) + 'k';
                             return Math.round(val);
