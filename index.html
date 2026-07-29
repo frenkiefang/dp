@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -566,8 +566,11 @@
         <section class="mb-6">
             <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
                 <div class="px-4 py-3.5 border-b border-zinc-800 flex items-center justify-between">
-                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest">
-                        <i class="fa-solid fa-trophy mr-1.5"></i>排行榜
+                    <p class="text-xs font-medium text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <span><i class="fa-solid fa-trophy mr-1.5"></i>排行榜</span>
+                        <a href="./tags.html" class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors" title="查看标签规则指南">
+                            <i class="fa-solid fa-question"></i>
+                        </a>
                     </p>
                     <span id="lb-count" class="text-xs text-zinc-600"></span>
                 </div>
@@ -1360,7 +1363,7 @@
                 const wRate = gDays > 0 ? Math.round((wDays / gDays) * 100) : 0;
                 const aPerDay = gDays > 0 ? Math.round(player.total / gDays) : 0;
                 const vol = computePlayerVolatility(player.name);
-                const pTag = getPlayerTag(player.name, index + 1, sorted.length, wRate, vol, player.total, gDays, aPerDay);
+                const pTag = getPlayerTag(player.name, index + 1, sorted.length, wRate, vol, player.total, gDays, aPerDay, sorted);
                 const tagHtml = `<span class="player-tag-badge" style="background:${pTag.bg};border:1px solid ${pTag.border};color:${pTag.color};"><span class="tag-emoji">${pTag.emoji}</span>${pTag.tag}</span>`;
 
                 row.innerHTML = `
@@ -1407,50 +1410,73 @@
             return pool[hashName(name) % pool.length];
         }
 
-        function getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay) {
+        function getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay, sortedPlayers = []) {
 
-            // ═══ 排名锁定 ═══
+            // ═══ 排名锁定与独立专属标签 ═══
             if (rank === 1) {
                 return { tag: '传奇扑克王', emoji: '👑', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' };
             }
             if (rank === 2) {
                 return { tag: '稳定收银员', emoji: '🏧', color: '#34D399', bg: '#34D39920', border: '#34D39940' };
             }
+
+            // 专属规则：【神偷】仅限于第3名，且从第4名开始的玩家积分全为负数
+            if (rank === 3 && sortedPlayers && sortedPlayers.length >= 4) {
+                const fourthAndBelowNegative = sortedPlayers.slice(3).every(p => p.total < 0);
+                if (fourthAndBelowNegative) {
+                    return { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' };
+                }
+            }
+
+            // 倒数第一名
             if (rank === totalPlayers) {
                 return { tag: '爱心捐款人', emoji: '❤️', color: '#EF4444', bg: '#EF444420', border: '#EF444440' };
             }
 
+            // 专属规则：【垫底守望者】仅限于倒数第二名，且距离倒数第一的分数比距离倒数第三名近
+            if (rank === totalPlayers - 1 && sortedPlayers && sortedPlayers.length >= 3) {
+                const scoreLast = sortedPlayers[totalPlayers - 1].total;     // 倒数第一分
+                const score2ndLast = sortedPlayers[totalPlayers - 2].total;  // 倒数第二分(自己)
+                const score3rdLast = sortedPlayers[totalPlayers - 3].total;  // 倒数第三分
+                const distToLast = score2ndLast - scoreLast;
+                const distTo3rdLast = score3rdLast - score2ndLast;
+                if (distToLast < distTo3rdLast) {
+                    return { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' };
+                }
+            }
+
             // ═══ 少场次玩家 ══════════════════════════
-            if (gameDays <= 3) {
+            if (gameDays <= 2) {
                 return { tag: '神秘失踪人口', emoji: '🫥', color: '#EF4444', bg: '#EF444420', border: '#EF444440' };    
-
             }
 
-            // ═══ 日均盈亏分档（基于真实数据：-810 ~ +707） ═══
+            // ═══ 日均盈亏分档 ═══
 
-            // >+700/天 顶端
-            if (avgPerDay > 700) {
-                return { tag: '人形印钞机', emoji: '🖨️', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' };
-;
+            if (winRate >= 75) {
+                return { tag: '全场无敌手', emoji: '🦾', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' };
             }
 
-            // +400~700/天 高端盈利
+            // >+300 高端盈利
             if (avgPerDay > 300) {
                 return pickTag(playerName, [
-                    { tag: '扑克猎手', emoji: '🔫', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
-                    { tag: '沉默杀手', emoji: '🥷', color: '#A78BFA', bg: '#A78BFA20', border: '#A78BFA40' },
+                    { tag: '人形印钞机', emoji: '🖨️', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' },
+                    { tag: '筹码收割机', emoji: '🚜', color: '#FBBF24', bg: '#FBBF2420', border: '#FBBF2440' },
+                    { tag: '庄家克星',   emoji: '⚡', color: '#34D399', bg: '#34D39920', border: '#34D39940' },
                 ]);
+            }
+
+            // ═══ 胜率 < 50% 且 日均正收益 (专属: 偷鸡大宗师) ═══
+            if (winRate < 50 && avgPerDay > 0) {
+                return { tag: '偷鸡大宗师', emoji: '🐔', color: '#34D399', bg: '#34D39920', border: '#34D39940' };
             }
 
             // +0~300/天 稳盈
             if (avgPerDay > 0) {
                 return pickTag(playerName, [
-                    { tag: '稳如老狗', emoji: '🐕', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
                     { tag: '小赢当赢', emoji: '😎', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
-                    { tag: '神偷', emoji: '🦝', color: '#38BDF8', bg: '#38BDF820', border: '#38BDF840' },
+                    { tag: '绝地保本人', emoji: '🛡️', color: '#A1A1AA', bg: '#A1A1AA20', border: '#A1A1AA40' },
                 ]);
             }
-
 
             // -100~0/天 微亏
             if (avgPerDay > -100) {
@@ -1472,8 +1498,8 @@
 
             // <-300/天 巨亏
             return pickTag(playerName, [
+                { tag: '慈善大天使', emoji: '👼', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
                 { tag: '散财童子', emoji: '💰', color: '#FB923C', bg: '#FB923C20', border: '#FB923C40' },
-                { tag: '垫底守望者', emoji: '🛡️', color: '#F87171', bg: '#F8717120', border: '#F8717140' },
             ]);
         }
 
@@ -1509,7 +1535,7 @@
             const rank = sorted.findIndex(p => p.name === playerName) + 1;
 
             // Player tag
-            const playerTag = getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay);
+            const playerTag = getPlayerTag(playerName, rank, totalPlayers, winRate, volatility, totalScore, gameDays, avgPerDay, sorted);
 
             // Color for the player
             const color = playerColorMap[playerName] || '#71717A';

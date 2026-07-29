@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090B">
+    <title>标签称号指南 — 积分看板</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=LXGW+WenKai+Mono+TC:wght@400;700&family=Playfair+Display+SC:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'mono': ['Special Elite', 'JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #F5F0E8;
+            --bg-card: #F5F0E8;
+            --bg-deeper: #EDE4D4;
+            --border: #D4CFC6;
+            --border-light: #BFBBB3;
+            --text-primary: #2E2A24;
+            --text-secondary: #4A4540;
+            --text-muted: #8C8C8C;
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', monospace;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #09090B;
+            --bg-card: #18181B;
+            --bg-deeper: #09090B;
+            --border: #27272A;
+            --border-light: #3F3F46;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body {
+            min-height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        [data-theme="light"] html::before {
+            content: ''; position: fixed; inset: 0; z-index: 999; pointer-events: none; opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        body { scrollbar-width: none; }
+
+        [data-theme="light"] .bg-zinc-900, [data-theme="light"] .bg-zinc-800 { background-color: var(--bg-card) !important; }
+        [data-theme="light"] .bg-zinc-950 { background-color: var(--bg-deeper) !important; }
+        [data-theme="light"] .border-zinc-800 { border-color: var(--border) !important; }
+        [data-theme="light"] .text-zinc-100 { color: var(--text-primary) !important; }
+        [data-theme="light"] .text-zinc-400, [data-theme="light"] .text-zinc-300 { color: var(--text-secondary) !important; }
+        [data-theme="light"] .text-zinc-500 { color: var(--text-muted) !important; }
+
+        .tag-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            shrink: 0;
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+
+    <main class="w-full max-w-md px-4 pt-4 pb-10">
+
+        <!-- ── Header Bar ── -->
+        <header class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-zinc-500 text-sm"></i>标签称号规则
+                </h1>
+                <p class="text-xs text-zinc-500 mt-0.5">了解各项成就称号的获得机制</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="theme-toggle" class="flex items-center gap-1 px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs font-medium transition-colors" title="切换主题">
+                    <i class="fa-solid fa-circle-half-stroke"></i>
+                </button>
+                <a href="./index.html" class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs font-medium transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>看板</span>
+                </a>
+            </div>
+        </header>
+
+        <div class="space-y-4">
+
+            <!-- ── 1. 独立与专属名次成就 ── -->
+            <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3.5 pb-2 border-b border-zinc-800/60">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">专属名次与独立成就</h2>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-amber-400/20 text-amber-400 border border-amber-400/40">👑 传奇扑克王</span>
+                        <span class="text-zinc-400 text-right">总积分排行榜 <b>第 1 名</b></span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-emerald-400/20 text-emerald-400 border border-emerald-400/40">🏧 稳定收银员</span>
+                        <span class="text-zinc-400 text-right">总积分排行榜 <b>第 2 名</b></span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-sky-400/20 text-sky-400 border border-sky-400/40">🦝 神偷</span>
+                        <span class="text-zinc-400 text-right">仅限 <b>第 3 名</b>，且从第 4 名开始所有选手积分均为负数（躺进前三）</span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-red-400/20 text-red-400 border border-red-400/40">❤️ 爱心捐款人</span>
+                        <span class="text-zinc-400 text-right">总积分排行榜 <b>倒数第 1 名</b></span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-red-400/20 text-red-400 border border-red-400/40">🛡️ 垫底守望者</span>
+                        <span class="text-zinc-400 text-right">仅限 <b>倒数第 2 名</b>，且离倒数第一的分数差比离倒数第三名更近</span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-red-400/20 text-red-400 border border-red-400/40">🫥 神秘失踪人口</span>
+                        <span class="text-zinc-400 text-right">参战天数仅 <b>1 ~ 2 天</b> 的神秘嘉宾</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── 2. 战术与胜率指标 ── -->
+            <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3.5 pb-2 border-b border-zinc-800/60">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">战术与胜率指标</h2>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-amber-400/20 text-amber-400 border border-amber-400/40">🦾 全场无敌手</span>
+                        <span class="text-zinc-400 text-right">胜率达到 <b>75% 及以上</b></span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-3 text-xs">
+                        <span class="tag-badge bg-emerald-400/20 text-emerald-400 border border-emerald-400/40">🐔 偷鸡大宗师</span>
+                        <span class="text-zinc-400 text-right">胜率低于 <b>50%</b>，但总体日均收益依然保持为正数</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── 3. 盈利玩家称号 ── -->
+            <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3.5 pb-2 border-b border-zinc-800/60">
+                    <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">盈利阶段称号</h2>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <div class="flex items-center justify-between text-zinc-400 mb-1.5">
+                            <span>日均盈利超过 <b>+300 分</b></span>
+                            <span class="text-zinc-500 font-mono">高端盈利</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="tag-badge bg-amber-400/20 text-amber-400 border border-amber-400/40">🖨️ 人形印钞机</span>
+                            <span class="tag-badge bg-amber-400/20 text-amber-400 border border-amber-400/40">🚜 筹码收割机</span>
+                            <span class="tag-badge bg-emerald-400/20 text-emerald-400 border border-emerald-400/40">⚡ 庄家克星</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-zinc-800/40">
+                        <div class="flex items-center justify-between text-zinc-400 mb-1.5">
+                            <span>日均盈利在 <b>0 ~ +300 分</b></span>
+                            <span class="text-zinc-500 font-mono">稳定盈利</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="tag-badge bg-sky-400/20 text-sky-400 border border-sky-400/40">😎 小赢当赢</span>
+                            <span class="tag-badge bg-zinc-400/20 text-zinc-400 border border-zinc-400/40">🛡️ 绝地保本人</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── 4. 负分与慈善称号 ── -->
+            <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3.5 pb-2 border-b border-zinc-800/60">
+                    <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">负分与慈善称号</h2>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <div class="flex items-center justify-between text-zinc-400 mb-1.5">
+                            <span>日均亏损在 <b>-100 ~ 0 分</b></span>
+                            <span class="text-zinc-500 font-mono">微亏阶段</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="tag-badge bg-zinc-400/20 text-zinc-400 border border-zinc-400/40">🐟 紧弱鱼</span>
+                            <span class="tag-badge bg-zinc-400/20 text-zinc-400 border border-zinc-400/40">🪨 石头人</span>
+                            <span class="tag-badge bg-orange-400/20 text-orange-400 border border-orange-400/40">🐎 黑马选手</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-zinc-800/40">
+                        <div class="flex items-center justify-between text-zinc-400 mb-1.5">
+                            <span>日均亏损在 <b>-300 ~ -100 分</b></span>
+                            <span class="text-zinc-500 font-mono">中度亏损</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="tag-badge bg-orange-400/20 text-orange-400 border border-orange-400/40">💰 散财童子</span>
+                            <span class="tag-badge bg-pink-400/20 text-pink-400 border border-pink-400/40">🎢 过山车之王</span>
+                            <span class="tag-badge bg-red-400/20 text-red-400 border border-red-400/40">🧗 悬崖边上</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-zinc-800/40">
+                        <div class="flex items-center justify-between text-zinc-400 mb-1.5">
+                            <span>日均亏损超过 <b>-300 分</b></span>
+                            <span class="text-zinc-500 font-mono">重度慈善</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="tag-badge bg-red-400/20 text-red-400 border border-red-400/40">👼 慈善大天使</span>
+                            <span class="tag-badge bg-orange-400/20 text-orange-400 border border-orange-400/40">💰 散财童子</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+        <footer class="text-center text-xs text-zinc-500 mt-8">
+            积分看板 · 标签称号指南
+        </footer>
+    </main>
+
+    <script>
+        (function() {
+            const btn = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            const saved = localStorage.getItem('dp-theme') || 'light';
+            html.setAttribute('data-theme', saved);
+            btn.addEventListener('click', () => {
+                const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('dp-theme', next);
+            });
+        })();
+    </script>
+</body>
+</html>
