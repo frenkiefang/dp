@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#09090B">
+    <title>骰子模拟器 — 积分看板</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=LXGW+WenKai+Mono+TC:wght@400;700&family=Playfair+Display+SC:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        'mono': ['Special Elite', 'JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #F5F0E8;
+            --bg-card: #F5F0E8;
+            --bg-deeper: #EDE4D4;
+            --border: #D4CFC6;
+            --border-light: #BFBBB3;
+            --text-primary: #2E2A24;
+            --text-secondary: #4A4540;
+            --text-muted: #8C8C8C;
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', monospace;
+            
+            /* Dice vars */
+            --dice-bg: #FFFFFF;
+            --dice-dot-red: #E63946;
+            --dice-dot-dark: #1D3557;
+            --dice-border: #D4CFC6;
+            --dice-shadow: rgba(0, 0, 0, 0.12);
+            --tray-bg: #EDE4D4;
+            --tray-border: #D4CFC6;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #09090B;
+            --bg-card: #18181B;
+            --bg-deeper: #09090B;
+            --border: #27272A;
+            --border-light: #3F3F46;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+            
+            /* Dice vars */
+            --dice-bg: #1F1F23;
+            --dice-dot-red: #EF4444;
+            --dice-dot-dark: #FAFAFA;
+            --dice-border: #3F3F46;
+            --dice-shadow: rgba(0, 0, 0, 0.4);
+            --tray-bg: #121214;
+            --tray-border: #27272A;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+        html, body {
+            min-height: 100%;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        [data-theme="light"] html::before {
+            content: ''; position: fixed; inset: 0; z-index: 999; pointer-events: none; opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        ::-webkit-scrollbar { width: 0; height: 0; }
+        body { scrollbar-width: none; }
+
+        /* Light theme overrides for Tailwind colors */
+        [data-theme="light"] .bg-zinc-900, [data-theme="light"] .bg-zinc-800 { background-color: var(--bg-card) !important; }
+        [data-theme="light"] .bg-zinc-950 { background-color: var(--bg-deeper) !important; }
+        [data-theme="light"] .border-zinc-800 { border-color: var(--border) !important; }
+        [data-theme="light"] .border-zinc-700 { border-color: var(--border-light) !important; }
+        [data-theme="light"] .text-zinc-100 { color: var(--text-primary) !important; }
+        [data-theme="light"] .text-zinc-300, [data-theme="light"] .text-zinc-400 { color: var(--text-secondary) !important; }
+        [data-theme="light"] .text-zinc-500 { color: var(--text-muted) !important; }
+
+        /* ── 3D Dice styling ── */
+        .dice-scene {
+            width: 80px;
+            height: 80px;
+            perspective: 400px;
+            margin: 20px;
+            display: inline-block;
+        }
+
+        .dice-cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.35, 1);
+            transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+        }
+
+        .dice-face {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: var(--dice-bg);
+            border: 2px solid var(--dice-border);
+            border-radius: 16px;
+            box-shadow: inset 0 0 8px var(--dice-shadow), 0 4px 8px rgba(0,0,0,0.15);
+            padding: 8px;
+            box-sizing: border-box;
+            backface-visibility: hidden;
+        }
+
+        /* Standard 3D layout for a cube of size 80px (translateZ = 40px) */
+        .face-1 { transform: rotateY(0deg) translateZ(40px); }
+        .face-2 { transform: rotateX(90deg) translateZ(40px); }
+        .face-3 { transform: rotateY(90deg) translateZ(40px); }
+        .face-4 { transform: rotateY(-90deg) translateZ(40px); }
+        .face-5 { transform: rotateX(-90deg) translateZ(40px); }
+        .face-6 { transform: rotateY(180deg) translateZ(40px); }
+
+        /* Dice Dots */
+        .dot {
+            position: absolute;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: background-color 0.3s;
+        }
+
+        .dot-red { background-color: var(--dice-dot-red); }
+        .dot-dark { background-color: var(--dice-dot-dark); }
+        
+        /* Face 1 center dot is much larger */
+        .face-1 .dot {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Dot coordinates relative to 80px face */
+        .dot-center { top: 50%; left: 50%; }
+        .dot-top-left { top: 25%; left: 25%; }
+        .dot-top-right { top: 25%; left: 75%; }
+        .dot-bottom-left { top: 75%; left: 25%; }
+        .dot-bottom-right { top: 75%; left: 75%; }
+        .dot-mid-left { top: 50%; left: 25%; }
+        .dot-mid-right { top: 50%; left: 75%; }
+
+        /* Tray layout */
+        .dice-tray {
+            background-color: var(--tray-bg);
+            border: 2px dashed var(--tray-border);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Shake animation for the tray */
+        @keyframes tray-shake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-3px, 2px) rotate(-1deg); }
+            20% { transform: translate(2px, -2px) rotate(1deg); }
+            30% { transform: translate(-2px, -3px) rotate(-0.5deg); }
+            40% { transform: translate(3px, 1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-0.5deg); }
+            60% { transform: translate(2px, -1px) rotate(0.5deg); }
+            70% { transform: translate(-2px, 1px) rotate(-1deg); }
+            80% { transform: translate(1px, -2px) rotate(1deg); }
+            90% { transform: translate(-3px, -1px) rotate(-0.5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .shake-active {
+            animation: tray-shake 0.5s ease-in-out;
+        }
+
+        /* Glassmorphism panel styling */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="flex justify-center min-h-screen">
+
+    <main class="w-full max-w-md px-4 pt-4 pb-10">
+
+        <!-- ── Header Bar ── -->
+        <header class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <a href="./index.html" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                        <i class="fa-solid fa-dice text-zinc-500 text-sm"></i>骰子模拟器
+                    </h1>
+                    <p class="text-xs text-zinc-500 mt-0.5">3D 真实摇号 & 概率统计</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="theme-toggle" class="flex items-center gap-1 px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs font-medium transition-colors" title="切换主题">
+                    <i class="fa-solid fa-circle-half-stroke"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── Mode Toggle Tabs ── -->
+        <div class="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 mb-5">
+            <button id="mode-single" class="flex-1 text-center py-2 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-100 transition-all">
+                单骰子
+            </button>
+            <button id="mode-double" class="flex-1 text-center py-2 text-xs font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition-all">
+                双骰子
+            </button>
+        </div>
+
+        <!-- ── Dice Tray Area ── -->
+        <div id="dice-tray" class="dice-tray w-full aspect-[4/3] flex items-center justify-center gap-4 mb-6 cursor-pointer">
+            
+            <!-- Dice 1 Scene -->
+            <div id="scene-1" class="dice-scene">
+                <div id="cube-1" class="dice-cube">
+                    <!-- Face 1 -->
+                    <div class="dice-face face-1">
+                        <span class="dot dot-red dot-center"></span>
+                    </div>
+                    <!-- Face 2 -->
+                    <div class="dice-face face-2">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 3 -->
+                    <div class="dice-face face-3">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-center"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 4 -->
+                    <div class="dice-face face-4">
+                        <span class="dot dot-red dot-top-left"></span>
+                        <span class="dot dot-red dot-top-right"></span>
+                        <span class="dot dot-red dot-bottom-left"></span>
+                        <span class="dot dot-red dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 5 -->
+                    <div class="dice-face face-5">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-top-right"></span>
+                        <span class="dot dot-dark dot-center"></span>
+                        <span class="dot dot-dark dot-bottom-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 6 -->
+                    <div class="dice-face face-6">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-top-right"></span>
+                        <span class="dot dot-dark dot-mid-left"></span>
+                        <span class="dot dot-dark dot-mid-right"></span>
+                        <span class="dot dot-dark dot-bottom-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice 2 Scene (Hidden initially) -->
+            <div id="scene-2" class="dice-scene hidden">
+                <div id="cube-2" class="dice-cube">
+                    <!-- Face 1 -->
+                    <div class="dice-face face-1">
+                        <span class="dot dot-red dot-center"></span>
+                    </div>
+                    <!-- Face 2 -->
+                    <div class="dice-face face-2">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 3 -->
+                    <div class="dice-face face-3">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-center"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 4 -->
+                    <div class="dice-face face-4">
+                        <span class="dot dot-red dot-top-left"></span>
+                        <span class="dot dot-red dot-top-right"></span>
+                        <span class="dot dot-red dot-bottom-left"></span>
+                        <span class="dot dot-red dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 5 -->
+                    <div class="dice-face face-5">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-top-right"></span>
+                        <span class="dot dot-dark dot-center"></span>
+                        <span class="dot dot-dark dot-bottom-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                    <!-- Face 6 -->
+                    <div class="dice-face face-6">
+                        <span class="dot dot-dark dot-top-left"></span>
+                        <span class="dot dot-dark dot-top-right"></span>
+                        <span class="dot dot-dark dot-mid-left"></span>
+                        <span class="dot dot-dark dot-mid-right"></span>
+                        <span class="dot dot-dark dot-bottom-left"></span>
+                        <span class="dot dot-dark dot-bottom-right"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Click Overlay text helper -->
+            <div class="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
+                <span class="text-[10px] text-zinc-500 uppercase tracking-widest bg-zinc-950/40 px-2.5 py-1 rounded-full border border-zinc-800/40">点击盘面或骰子进行摇晃</span>
+            </div>
+        </div>
+
+        <!-- ── Main Control Panel ── -->
+        <div class="flex gap-3 mb-6">
+            <button id="btn-roll" class="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-2xl font-semibold shadow-lg shadow-indigo-600/20 transition-all">
+                <i class="fa-solid fa-rotate mr-0.5"></i> 摇晃骰子
+            </button>
+            <button id="btn-reset" class="px-5 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 active:scale-[0.98] border border-zinc-700 rounded-2xl text-zinc-300 font-semibold transition-all" title="重置数据">
+                <i class="fa-solid fa-arrow-rotate-left mr-1.5"></i> 重置
+            </button>
+        </div>
+
+        <!-- ── Active Roll Banner (Shows current sum / values) ── -->
+        <div id="roll-result-banner" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-6 text-center shadow-sm">
+            <p class="text-xs text-zinc-500 font-medium">当前点数</p>
+            <div class="flex items-center justify-center gap-3 mt-1.5">
+                <span id="result-label" class="text-2xl font-bold text-zinc-500 tracking-tight">-</span>
+            </div>
+        </div>
+
+        <!-- ── History Section ── -->
+        <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-zinc-500 text-xs"></i> 摇号历史 (最近10次)
+                </h3>
+                <span class="text-[10px] font-mono text-zinc-500" id="history-counter">0 次记录</span>
+            </div>
+            <div id="history-container" class="flex flex-wrap gap-2 min-h-[36px] items-center">
+                <span class="text-xs text-zinc-500 italic">暂无历史记录</span>
+            </div>
+        </section>
+
+        <!-- ── Statistics Section ── -->
+        <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-simple text-zinc-500 text-xs"></i> 概率与点数统计
+                </h3>
+                <span class="text-[10px] font-mono text-zinc-500" id="stats-avg">均值: -</span>
+            </div>
+
+            <!-- 1-6 Point stats bars -->
+            <div class="space-y-3" id="stats-bars">
+                <!-- Bar 1 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-red-400 font-bold">1</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-1">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-1" class="bg-red-500 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Bar 2 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300 font-bold">2</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-2">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-2" class="bg-indigo-400 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Bar 3 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300 font-bold">3</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-3">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-3" class="bg-indigo-400 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Bar 4 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-red-400 font-bold">4</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-4">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-4" class="bg-red-400 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Bar 5 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300 font-bold">5</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-5">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-5" class="bg-indigo-400 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+
+                <!-- Bar 6 -->
+                <div>
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1 text-zinc-300 font-medium">
+                            <span class="inline-flex w-4 h-4 items-center justify-center rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-300 font-bold">6</span>点
+                        </span>
+                        <span class="font-mono text-zinc-400" id="stat-count-6">0 次 (0%)</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-1.5 border border-zinc-800 overflow-hidden">
+                        <div id="stat-bar-6" class="bg-indigo-400 h-full w-0 rounded-full transition-all duration-500"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // ──────────────────────────────────────────────
+        //  THEME TOGGLE
+        // ──────────────────────────────────────────────
+        (function() {
+            const btn = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+            const saved = localStorage.getItem('dp-theme') || 'light';
+            html.setAttribute('data-theme', saved);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                    html.setAttribute('data-theme', next);
+                    localStorage.setItem('dp-theme', next);
+                });
+            }
+        })();
+
+        // ──────────────────────────────────────────────
+        //  DICE LOGIC & VARIABLES
+        // ──────────────────────────────────────────────
+        let currentMode = 'single'; // 'single' or 'double'
+        let isRolling = false;
+
+        // Current rotation state for cumulative rotations
+        let diceRotations = {
+            1: { x: 0, y: 0, z: 0 },
+            2: { x: 0, y: 0, z: 0 }
+        };
+
+        // State trackers
+        let rollsHistory = [];
+        let rollsCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let totalCount = 0;
+
+        // Standard angles to display each face facing forward
+        const faceAngles = {
+            1: { x: 0, y: 0 },
+            2: { x: -90, y: 0 },
+            3: { x: 0, y: -90 },
+            4: { x: 0, y: 90 },
+            5: { x: 90, y: 0 },
+            6: { x: 180, y: 0 }
+        };
+
+        // UI elements
+        const tray = document.getElementById('dice-tray');
+        const cube1 = document.getElementById('cube-1');
+        const cube2 = document.getElementById('cube-2');
+        const scene2 = document.getElementById('scene-2');
+        const btnRoll = document.getElementById('btn-roll');
+        const btnReset = document.getElementById('btn-reset');
+        const modeSingleBtn = document.getElementById('mode-single');
+        const modeDoubleBtn = document.getElementById('mode-double');
+        const resultLabel = document.getElementById('result-label');
+        const historyContainer = document.getElementById('history-container');
+        const historyCounter = document.getElementById('history-counter');
+        const statsAvg = document.getElementById('stats-avg');
+
+        // Audio Context setup (created on first interaction)
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Synthesize thud/click sounds
+        function playThud(time, duration, frequency, volume) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(frequency, time);
+                osc.frequency.exponentialRampToValueAtTime(15, time + duration);
+
+                gainNode.gain.setValueAtTime(volume, time);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+                osc.start(time);
+                osc.stop(time + duration);
+            } catch (e) {
+                console.error("Audio error", e);
+            }
+        }
+
+        function playClick(time, volume) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1000 + Math.random() * 400, time);
+                gain.gain.setValueAtTime(volume, time);
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+                osc.start(time);
+                osc.stop(time + 0.03);
+            } catch (e) {
+                console.error("Audio error", e);
+            }
+        }
+
+        function playDiceAudioSequence() {
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const duration = 1.2; // Match CSS transition duration
+
+            // Play random shakes/rattles during the roll
+            const rattleCount = 6 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < rattleCount; i++) {
+                const shakeTime = now + (i / rattleCount) * duration * 0.85;
+                // Combine high click & low thud for realistic plastic bounce
+                playThud(shakeTime, 0.08, 120 + Math.random() * 80, 0.08);
+                playClick(shakeTime, 0.04);
+            }
+
+            // Play final landing impact
+            const landingTime = now + duration;
+            playThud(landingTime, 0.35, 65, 0.25);
+            playClick(landingTime, 0.12);
+
+            // Double dice has a secondary impact slightly delayed
+            if (currentMode === 'double') {
+                const secondLanding = landingTime + 0.12;
+                playThud(secondLanding, 0.3, 58, 0.2);
+                playClick(secondLanding, 0.1);
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  UI INTERACTIONS
+        // ──────────────────────────────────────────────
+        modeSingleBtn.addEventListener('click', () => {
+            if (isRolling) return;
+            currentMode = 'single';
+            modeSingleBtn.className = "flex-1 text-center py-2 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-100 transition-all";
+            modeDoubleBtn.className = "flex-1 text-center py-2 text-xs font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition-all";
+            scene2.classList.add('hidden');
+            resetDiceVisuals();
+            updateResultText();
+        });
+
+        modeDoubleBtn.addEventListener('click', () => {
+            if (isRolling) return;
+            currentMode = 'double';
+            modeDoubleBtn.className = "flex-1 text-center py-2 text-xs font-medium rounded-lg bg-zinc-800 text-zinc-100 transition-all";
+            modeSingleBtn.className = "flex-1 text-center py-2 text-xs font-medium rounded-lg text-zinc-400 hover:text-zinc-200 transition-all";
+            scene2.classList.remove('hidden');
+            resetDiceVisuals();
+            updateResultText();
+        });
+
+        function resetDiceVisuals() {
+            // Smoothly reset rotations to 0,0,0
+            diceRotations[1] = { x: 0, y: 0, z: 0 };
+            diceRotations[2] = { x: 0, y: 0, z: 0 };
+            cube1.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+            cube2.style.transform = `rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
+        }
+
+        // Trigger roll on click of tray or roll button
+        tray.addEventListener('click', rollDice);
+        btnRoll.addEventListener('click', rollDice);
+
+        btnReset.addEventListener('click', () => {
+            if (isRolling) return;
+            initAudio();
+            
+            // Clear stats
+            rollsHistory = [];
+            totalCount = 0;
+            for (let i = 1; i <= 6; i++) {
+                rollsCount[i] = 0;
+            }
+
+            resetDiceVisuals();
+            updateUI();
+            
+            resultLabel.innerHTML = "-";
+            resultLabel.className = "text-2xl font-bold text-zinc-500 tracking-tight";
+            
+            // Tiny thud as confirmation
+            if (audioCtx) {
+                playThud(audioCtx.currentTime, 0.1, 150, 0.05);
+            }
+        });
+
+        // ──────────────────────────────────────────────
+        //  ROLL LOGIC
+        // ──────────────────────────────────────────────
+        function rollDice() {
+            if (isRolling) return;
+            isRolling = true;
+
+            // Trigger tray shake effect
+            tray.classList.add('shake-active');
+            setTimeout(() => {
+                tray.classList.remove('shake-active');
+            }, 500);
+
+            // Audio
+            playDiceAudioSequence();
+
+            // Determine values
+            const val1 = Math.floor(Math.random() * 6) + 1;
+            const val2 = Math.floor(Math.random() * 6) + 1;
+
+            // Animate Dice 1
+            animateCube(cube1, 1, val1);
+
+            // Animate Dice 2 (if double mode)
+            if (currentMode === 'double') {
+                animateCube(cube2, 2, val2);
+            }
+
+            // Disable buttons during roll
+            btnRoll.disabled = true;
+            btnRoll.classList.add('opacity-50');
+
+            setTimeout(() => {
+                // Done rolling
+                isRolling = false;
+                btnRoll.disabled = false;
+                btnRoll.classList.remove('opacity-50');
+
+                // Save data
+                if (currentMode === 'single') {
+                    rollsHistory.unshift(val1);
+                    rollsCount[val1]++;
+                    totalCount++;
+                    
+                    // Update label
+                    resultLabel.innerHTML = `${val1}点`;
+                    resultLabel.className = "text-3xl font-extrabold text-indigo-400 tracking-tight";
+                } else {
+                    rollsHistory.unshift({ v1: val1, v2: val2, sum: val1 + val2 });
+                    rollsCount[val1]++;
+                    rollsCount[val2]++;
+                    totalCount += 2;
+                    
+                    // Update label
+                    resultLabel.innerHTML = `<span class="text-zinc-400 text-xl font-medium">${val1} + ${val2} =</span> <span class="text-3xl font-extrabold text-indigo-400">${val1 + val2}</span> <span class="text-xs text-zinc-500 font-medium ml-1">点</span>`;
+                }
+
+                // Keep history to last 10
+                if (rollsHistory.length > 10) {
+                    rollsHistory.pop();
+                }
+
+                updateUI();
+            }, 1200); // Must match transition duration in CSS (1.2s)
+        }
+
+        function animateCube(cubeElement, diceId, targetValue) {
+            const current = diceRotations[diceId];
+            const target = faceAngles[targetValue];
+
+            // Add multiple random spins (between 3 to 5 full turns) to each axis
+            const spinsX = (Math.floor(Math.random() * 3) + 3) * 360;
+            const spinsY = (Math.floor(Math.random() * 3) + 3) * 360;
+            const spinsZ = (Math.floor(Math.random() * 2) + 2) * 360; // Extra tilt rotation on Z axis
+
+            // Calculate the next angle coordinates cumulatively
+            const nextX = Math.ceil(current.x / 360) * 360 + target.x + spinsX;
+            const nextY = Math.ceil(current.y / 360) * 360 + target.y + spinsY;
+            const nextZ = Math.ceil(current.z / 360) * 360 + spinsZ;
+
+            // Save new rotations
+            diceRotations[diceId] = { x: nextX, y: nextY, z: nextZ };
+
+            // Apply transform
+            cubeElement.style.transform = `rotateX(${nextX}deg) rotateY(${nextY}deg) rotateZ(${nextZ}deg)`;
+        }
+
+        function updateResultText() {
+            resultLabel.innerHTML = "-";
+            resultLabel.className = "text-2xl font-bold text-zinc-500 tracking-tight";
+        }
+
+        // ──────────────────────────────────────────────
+        //  UI DATA UPDATING
+        // ──────────────────────────────────────────────
+        function updateUI() {
+            // Update History
+            historyContainer.innerHTML = '';
+            if (rollsHistory.length === 0) {
+                historyContainer.innerHTML = '<span class="text-xs text-zinc-500 italic">暂无历史记录</span>';
+                historyCounter.innerHTML = '0 次记录';
+            } else {
+                historyCounter.innerHTML = `${rollsHistory.length} 次记录`;
+                rollsHistory.forEach(item => {
+                    const badge = document.createElement('span');
+                    badge.className = "inline-flex items-center gap-1 px-2.5 py-1 bg-zinc-800 border border-zinc-700 rounded-lg text-xs font-mono font-semibold transition-all duration-300";
+                    
+                    if (typeof item === 'number') {
+                        badge.classList.add('text-indigo-400');
+                        badge.innerHTML = `<i class="fa-solid fa-dice-d6 text-zinc-500 text-[10px]"></i> ${item}`;
+                    } else {
+                        badge.classList.add('text-zinc-200');
+                        badge.innerHTML = `<span class="text-[10px] text-zinc-500 font-normal">${item.v1}+${item.v2}=</span><span class="text-indigo-400 font-bold">${item.sum}</span>`;
+                    }
+                    historyContainer.appendChild(badge);
+                });
+            }
+
+            // Update Stats averages
+            if (totalCount === 0) {
+                statsAvg.innerHTML = '均值: -';
+            } else {
+                let sum = 0;
+                for (let i = 1; i <= 6; i++) {
+                    sum += rollsCount[i] * i;
+                }
+                const avg = (sum / totalCount).toFixed(2);
+                statsAvg.innerHTML = `总数: ${totalCount} | 均值: <span class="font-mono text-indigo-400 font-bold">${avg}</span>`;
+            }
+
+            // Update Stats Bars
+            for (let i = 1; i <= 6; i++) {
+                const count = rollsCount[i];
+                const percentage = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+                
+                document.getElementById(`stat-count-${i}`).innerHTML = `${count} 次 (${percentage}%)`;
+                document.getElementById(`stat-bar-${i}`).style.width = `${percentage}%`;
+            }
+        }
+    </script>
+</body>
+</html>
