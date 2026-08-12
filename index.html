@@ -40,6 +40,7 @@
     <style>
         /* ── Base ── */
         :root {
+            color-scheme: light;
             --bg-primary: #F5F0E8;
             --bg-card: #F5F0E8;
             --bg-deeper: #EDE4D4;
@@ -60,6 +61,7 @@
         }
 
         [data-theme="dark"] {
+            color-scheme: dark;
             --bg-primary: #09090B;
             --bg-card: #18181B;
             --bg-deeper: #09090B;
@@ -69,17 +71,17 @@
             --text-secondary: #A1A1AA;
             --text-muted: #71717A;
             --ink-ghost: #52525B;
-            --accent: #34D399;
-            --accent-glow: rgba(52,211,153,0.12);
+            --accent: #E0B034; /* Royal Gold */
+            --accent-glow: rgba(224,176,52,0.12);
             --profit: #10B981;
             --loss: #EF4444;
-            --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-            --font-mono: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+            --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
+            --font-mono: 'Special Elite', 'Space Mono', monospace;
         }
 
         [data-theme="dark"] .font-mono {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+            font-family: 'Special Elite', 'Space Mono', monospace !important;
         }
 
         * {
@@ -350,7 +352,22 @@
         }
 
         /* ── Player Tag Badge ── */
-        .player-tag-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.01em; border: 0.5px solid currentColor; animation: tag-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        .player-tag-badge {
+            display: inline-flex; align-items: center; gap: 3px; padding: 2.5px 8px; border-radius: 14px; font-size: 10px; font-weight: 700; letter-spacing: 0.01em; border: 0.5px solid currentColor; animation: tag-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            box-shadow: 0 1.5px 3px rgba(0,0,0,0.06);
+        }
+        .player-tag-badge::before {
+            content: '';
+            position: absolute;
+            top: 1.5px;
+            left: 1.5px;
+            right: 1.5px;
+            bottom: 1.5px;
+            border: 0.5px dashed currentColor;
+            border-radius: 12px;
+            opacity: 0.3;
+            pointer-events: none;
         }
         .player-tag-badge .tag-emoji {
             font-size: 13px;
@@ -378,10 +395,43 @@
             border: none !important;
             box-shadow: none !important;
         }
-        .apexcharts-tooltip.apexcharts-theme-dark {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
+        /* ── Leather Card (Signature Element) ── */
+        .leather-card {
+            position: relative;
+            background: linear-gradient(135deg, #161a22 0%, #0d1013 100%) !important;
+            border: 1px solid #242b36 !important;
+            border-radius: 18px;
+            box-shadow: inset 0 0 24px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.4) !important;
+            overflow: hidden;
+        }
+        [data-theme="light"] .leather-card {
+            background: linear-gradient(135deg, #fefcf7 0%, #f4edeb 100%) !important;
+            border: 1px solid #d4c9b4 !important;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.02), 0 6px 14px rgba(26,54,93,0.04) !important;
+        }
+        .leather-card::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            border: 1.5px dashed rgba(224, 176, 52, 0.22);
+            border-radius: 14px;
+            pointer-events: none;
+        }
+        [data-theme="light"] .leather-card::after {
+            border: 1.5px dashed rgba(26, 54, 93, 0.12);
+        }
+
+        /* ── Heading Font Utility ── */
+        .font-heading {
+            font-family: var(--font-heading) !important;
+        }
+
+        /* ── Leaderboard Row Active Fix ── */
+        [data-theme="light"] .lb-row:active {
+            background: var(--bg-deeper) !important;
         }
     </style>
 </head>
@@ -393,28 +443,29 @@
         <!-- ── Header Bar ── -->
         <header class="flex items-center justify-between mb-5">
             <div>
-                <h1 class="text-lg font-semibold tracking-tight text-zinc-100">
-                    <i class="fa-solid fa-chart-line mr-2 text-zinc-500" style="font-size:15px;"></i>积分看板
+                <h1 class="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-line text-zinc-500" style="font-size:15px;"></i>积分看板
+                    <span id="status-dot" class="status-dot offline w-1.5 h-1.5 rounded-full inline-block"></span>
                 </h1>
-                <p class="text-xs text-zinc-500 mt-0.5">
-                    <span id="update-date" class="text-zinc-600">加载中</span>
+                <p class="text-[10px] text-zinc-500 mt-0.5 flex items-center gap-1.5">
+                    <span id="update-date" class="text-zinc-500">加载中</span>
+                    <span>·</span>
+                    <span id="status-text">检测中</span>
                 </p>
             </div>
-            <div id="connection-indicator" class="flex items-center gap-1.5 text-xs text-zinc-500">
-                <a href="./calc.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="胜率计算器">
-                    <i class="fa-solid fa-calculator"></i>
-                    <span>胜率计算器</span>
+            <div class="flex items-center gap-1.5">
+                <a href="./calc.html" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all" title="胜率计算器">
+                    <i class="fa-solid fa-calculator text-sm"></i>
                 </a>
-                <a href="./dice.html" class="flex items-center gap-1 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="骰子模拟器">
-                    <i class="fa-solid fa-dice"></i>
+                <a href="./dice.html" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all" title="骰子模拟器">
+                    <i class="fa-solid fa-dice text-sm"></i>
                 </a>
-                <a href="./admin.html" class="flex items-center gap-1.5 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="数据管理">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    <span>管理</span>
+                <a href="./admin.html" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all" title="数据管理">
+                    <i class="fa-solid fa-pen-to-square text-sm"></i>
                 </a>
-                <button id="theme-toggle" class="flex items-center gap-1 px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all text-xs font-medium" title="切换主题"><i class="fa-solid fa-circle-half-stroke"></i></button>
-                <span id="status-dot" class="status-dot offline" style="display:none"></span>
-                <span id="status-text">检测中</span>
+                <button id="theme-toggle" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600 rounded-lg text-zinc-300 hover:text-zinc-100 transition-all" title="切换主题">
+                    <i class="fa-solid fa-circle-half-stroke text-sm"></i>
+                </button>
             </div>
         </header>
 
@@ -508,7 +559,7 @@
 
         <!-- ── Period Score Hero Card ── -->
         <section class="mb-5">
-            <div id="hero-card" class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 relative overflow-hidden">
+            <div id="hero-card" class="leather-card p-5 relative overflow-hidden">
                 <!-- Subtle glow top-right -->
                 <div class="absolute top-0 right-0 w-32 h-32 bg-zinc-800/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
@@ -1310,7 +1361,7 @@
                 row.className = 'lb-row dynamic border-b border-zinc-800/50';
                 // No click handler for this board — it's display-only
                 row.innerHTML = `
-                    <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
+                    <span class="font-heading text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
                     <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)}</span>
                     <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${formatPoints(player.total)}
@@ -1370,7 +1421,7 @@
                 const tagHtml = `<span class="player-tag-badge" style="background:${pTag.bg};border:1px solid ${pTag.border};color:${pTag.color};"><span class="tag-emoji">${pTag.emoji}</span>${pTag.tag}</span>`;
 
                 row.innerHTML = `
-                    <span class="font-mono text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
+                    <span class="font-heading text-sm text-zinc-500 text-center">${padRank(index + 1)}</span>
                     <span class="text-sm text-zinc-200 font-medium truncate">${escapeHtml(player.name)} ${tagHtml}</span>
                     <span class="font-mono text-sm font-semibold text-right ${player.total >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${formatPoints(player.total)}

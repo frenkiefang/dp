@@ -27,12 +27,37 @@
 
     <style>
         :root {
+            color-scheme: light;
+            --bg-primary: #F5F0E8;
+            --bg-card: #F5F0E8;
+            --bg-deeper: #EDE4D4;
+            --border: #D4CFC6;
+            --border-light: #BFBBB3;
+            --text-primary: #2E2A24;
+            --text-secondary: #4A4540;
+            --text-muted: #8C8C8C;
+            --ink-ghost: #BFBBB3;
+            --accent: #0047AB;
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+            --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
+            --font-mono: 'Special Elite', 'Space Mono', monospace;
+        }
+
+        [data-theme="dark"] {
+            color-scheme: dark;
             --bg-primary: #09090B;
             --bg-card: #18181B;
+            --bg-deeper: #09090B;
             --border: #27272A;
+            --border-light: #3F3F46;
             --text-primary: #FAFAFA;
             --text-secondary: #A1A1AA;
             --text-muted: #71717A;
+            --ink-ghost: #52525B;
+            --accent: #E0B034; /* Royal Gold */
+            --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+            --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
+            --font-mono: 'Special Elite', 'Space Mono', monospace;
         }
 
         * { -webkit-tap-highlight-color: transparent; }
@@ -79,11 +104,73 @@
         .toast.show { transform: translateX(-50%) translateY(0); }
         .toast.success { background: #0A2E1F; color: #A7F3D0; border: 1px solid #14532D; }
         .toast.error { background: #3B0A0A; color: #FECACA; border: 1px solid #7F1D1D; }
+
+        /* ── Light theme overrides ── */
+        [data-theme="light"] html::before {
+            content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+        [data-theme="light"] html {
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.008) 2px, rgba(0,0,0,0.008) 4px), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.005) 3px, rgba(0,0,0,0.005) 6px);
+        }
+
+        [data-theme="light"] .bg-zinc-900, [data-theme="light"] .bg-zinc-800 { background-color: var(--bg-card) !important; }
+        [data-theme="light"] .bg-zinc-950 { background-color: var(--bg-deeper) !important; }
+        [data-theme="light"] .border-zinc-800, [data-theme="light"] .border-zinc-700 { border-color: var(--border) !important; }
+        [data-theme="light"] .text-zinc-100 { color: var(--text-primary) !important; }
+        [data-theme="light"] .text-zinc-200, [data-theme="light"] .text-zinc-300, [data-theme="light"] .text-zinc-400 { color: var(--text-secondary) !important; }
+        [data-theme="light"] .text-zinc-500 { color: var(--text-muted) !important; }
+        [data-theme="light"] .text-zinc-600, [data-theme="light"] .text-zinc-700 { color: var(--ink-ghost) !important; }
+        
+        [data-theme="light"] input, [data-theme="light"] select {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border) !important;
+            color: var(--text-primary) !important;
+        }
+        [data-theme="light"] input:focus, [data-theme="light"] select:focus {
+            border-color: var(--border-light) !important;
+        }
+        [data-theme="light"] button#login-btn, [data-theme="light"] button#submit-btn {
+            background-color: var(--accent) !important;
+            color: #FFFFFF !important;
+        }
+        [data-theme="light"] button#login-btn:hover, [data-theme="light"] button#submit-btn:hover {
+            opacity: 0.95;
+        }
+        
+        [data-theme="light"] .toast.success { background: rgba(0,71,171,0.08); color: #0047AB; border: 1px solid rgba(0,71,171,0.2); }
+        [data-theme="light"] .toast.error { background: rgba(220,47,47,0.06); color: #DC2F2F; border: 1px solid rgba(220,47,47,0.2); }
+        [data-theme="light"] .remove-row-btn:hover { background-color: rgba(220, 47, 47, 0.06) !important; color: #DC2F2F !important; }
     </style>
 </head>
 <body class="flex justify-center min-h-screen">
 
     <main class="w-full max-w-lg px-4 pt-4 pb-8">
+
+        <!-- Unified Header Bar -->
+        <header class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <a href="./index.html" class="flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs transition-colors" title="返回主页">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-zinc-500 text-sm"></i>数据管理
+                    </h1>
+                    <p class="text-xs text-zinc-500 mt-0.5">
+                        <span id="login-user" class="text-zinc-400">管理员控制台</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="theme-toggle" class="flex items-center gap-1 px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-300 text-xs font-medium transition-colors" title="切换主题">
+                    <i class="fa-solid fa-circle-half-stroke"></i>
+                </button>
+                <button id="logout-btn" class="hidden flex items-center justify-center w-8 h-8 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-red-950 rounded-lg text-zinc-400 hover:text-red-400 text-xs transition-all animate-fade-in" title="登出">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
 
         <!-- ═══════════ LOGIN VIEW ═══════════ -->
         <div id="login-view">
@@ -121,25 +208,7 @@
         <!-- ═══════════ ADMIN VIEW (hidden until login) ═══════════ -->
         <div id="admin-view" class="hidden">
 
-            <!-- Header -->
-            <header class="flex items-center justify-between mb-5">
-                <div>
-                    <h1 class="text-lg font-semibold tracking-tight text-zinc-100">
-                        <i class="fa-solid fa-pen-to-square mr-2 text-zinc-500" style="font-size:15px;"></i>数据管理
-                    </h1>
-                    <p class="text-xs text-zinc-500 mt-0.5">
-                        <span id="login-user" class="text-zinc-400"></span>
-                    </p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <a href="./index.html" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-                        <i class="fa-solid fa-arrow-left"></i>看板
-                    </a>
-                    <button id="logout-btn" class="text-xs text-zinc-500 hover:text-red-400 transition-colors">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                    </button>
-                </div>
-            </header>
+
 
             <!-- ── Entry Form ── -->
             <section class="mb-5">
@@ -152,7 +221,7 @@
                         <label class="text-xs text-zinc-500 block mb-1.5">日期</label>
                         <input type="date" id="entry-date"
                             class="w-full max-w-full min-w-0 box-border bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-zinc-200
-                                   focus:outline-none focus:border-zinc-600 transition-colors [color-scheme:dark]">
+                                   focus:outline-none focus:border-zinc-600 transition-colors">
                     </div>
 
                     <div id="player-rows" class="space-y-2 mb-3"></div>
@@ -295,12 +364,15 @@
             domAdminView.classList.add('hidden');
             domLoginEmail.value = '';
             domLoginPassword.value = '';
+            domLogoutBtn.classList.add('hidden');
+            domLoginUser.textContent = '管理员控制台';
         }
 
         function showAdminView(user) {
             domLoginView.classList.add('hidden');
             domAdminView.classList.remove('hidden');
             domLoginUser.textContent = user.email;
+            domLogoutBtn.classList.remove('hidden');
             initAdminPanel();
         }
 
@@ -501,6 +573,21 @@
         }
 
         document.addEventListener('DOMContentLoaded', init);
+    })();
+
+    // ── Theme Toggle ──
+    (function() {
+        const btn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        const saved = localStorage.getItem('dp-theme') || 'light';
+        html.setAttribute('data-theme', saved);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('dp-theme', next);
+            });
+        }
     })();
     </script>
 </body>

@@ -12,10 +12,43 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- FontAwesome 6 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <style>
-  /* ── CSS Variables (dark theme, matching index) ── */
+  /* ── CSS Variables (Default Light Theme) ── */
   :root {
+    --bg-primary:    #F5F0E8;
+    --bg-card:       #FFFFFF;
+    --bg-elevated:   #EDE4D4;
+    --border:        #D4CFC6;
+    --border-light:  #BFBBB3;
+    --text-primary:  #2E2A24;
+    --text-secondary:#4A4540;
+    --text-muted:    #8C8C8C;
+    --accent:        #0047AB;
+    --accent-dim:    #003380;
+    --accent-bg:     rgba(0, 71, 171, 0.08);
+    --red:           #DC2F2F;
+    --red-bg:        rgba(220, 47, 47, 0.08);
+    --win-green:     #10B981;
+    --tie-gray:      #8C8C8C;
+    --lose-red:      #DC2F2F;
+    --card-red:      #D32F2F;
+    --card-black:    #1E2022;
+    --shadow-sm:     0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md:     0 4px 12px rgba(0,0,0,0.05);
+    --radius-sm:     8px;
+    --radius-md:     12px;
+    --radius-lg:     16px;
+    --radius-xl:     20px;
+    
+    --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+    --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
+  }
+
+  /* ── CSS Variables (Dark Theme Override) ── */
+  [data-theme="dark"] {
     --bg-primary:    #09090B;
     --bg-card:       #18181B;
     --bg-elevated:   #27272A;
@@ -36,10 +69,9 @@
     --card-black:    #FAFAFA;
     --shadow-sm:     0 1px 2px rgba(0,0,0,0.3);
     --shadow-md:     0 4px 16px rgba(0,0,0,0.4);
-    --radius-sm:     8px;
-    --radius-md:     12px;
-    --radius-lg:     16px;
-    --radius-xl:     20px;
+    
+    --font-body: 'Special Elite', 'LXGW WenKai Mono TC', 'Space Mono', monospace;
+    --font-heading: 'Playfair Display SC', 'LXGW WenKai Mono TC', 'Noto Serif SC', serif;
   }
 
   /* ── Reset & Base ── */
@@ -59,6 +91,15 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Paper grain (light theme only) ── */
+  [data-theme="light"] html::before {
+    content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  [data-theme="light"] html {
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.008) 2px, rgba(0,0,0,0.008) 4px), repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.005) 3px, rgba(0,0,0,0.005) 6px);
   }
 
   /* Hide scrollbar */
@@ -86,7 +127,7 @@
     margin-bottom: 6px;
   }
   .header h1 {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-heading), serif;
     font-size: 24px;
     font-weight: 700;
     color: var(--text-primary);
@@ -185,12 +226,12 @@
   }
   .card-slot:active { transform: scale(0.95); }
   .card-slot.filled {
-    background: var(--bg-card);
-    border: 1.5px solid var(--border-light);
-    box-shadow: var(--shadow-sm);
-    border-style: solid;
+    background: #FCFAF2 !important;
+    border: 1px solid #D4C9B4 !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12), inset 0 0 4px rgba(255,255,255,0.65) !important;
+    transform: translateY(-2px);
   }
-  .card-slot.filled:active { transform: scale(0.95); }
+  .card-slot.filled:active { transform: translateY(-2px) scale(0.95); }
   .card-slot .plus { font-size: 22px; color: var(--text-muted); line-height: 1; }
 
   .card-inner {
@@ -204,9 +245,14 @@
   .card-suit { font-size: 20px; line-height: 1; margin-top: 1px; }
 
   .card-slot.red-card .card-rank,
-  .card-slot.red-card .card-suit { color: var(--card-red); }
+  .card-slot.red-card .card-suit,
+  .card-slot.red-card .card-corner,
+  .card-slot.red-card .card-corner-br { color: #D32F2F !important; }
+
   .card-slot.black-card .card-rank,
-  .card-slot.black-card .card-suit { color: var(--card-black); }
+  .card-slot.black-card .card-suit,
+  .card-slot.black-card .card-corner,
+  .card-slot.black-card .card-corner-br { color: #1E2022 !important; }
 
   /* Corner pips */
   .card-corner {
@@ -218,10 +264,6 @@
     font-size: 9px; font-weight: 700; line-height: 1.1;
     transform: rotate(180deg);
   }
-  .card-slot.red-card .card-corner,
-  .card-slot.red-card .card-corner-br { color: var(--card-red); }
-  .card-slot.black-card .card-corner,
-  .card-slot.black-card .card-corner-br { color: var(--card-black); }
 
   .clear-hand {
     font-size: 11px; color: var(--text-muted); cursor: pointer;
@@ -537,11 +579,64 @@
     .community-slot { width: 50px; height: 70px; }
     .rank-btn { width: 42px; height: 42px; font-size: 15px; }
   }
+
+  /* ── Header Controls ── */
+  .header-controls {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    width: 100%;
+  }
+  .btn-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .btn-icon:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-light);
+  }
+  .btn-icon:active {
+    transform: scale(0.95);
+  }
+
+  /* ── Suit and Rank Buttons Light Theme Overrides ── */
+  [data-theme="light"] .suit-btn.black-suit.selected {
+    background: rgba(46, 42, 36, 0.08) !important;
+    border-color: #2E2A24 !important;
+    color: #2E2A24 !important;
+  }
+  [data-theme="light"] .suit-btn.red-suit.selected {
+    background: rgba(220, 47, 47, 0.08) !important;
+    border-color: #DC2F2F !important;
+    color: #DC2F2F !important;
+  }
+  [data-theme="light"] .rank-btn.selected {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 8px rgba(0, 71, 171, 0.25) !important;
+  }
 </style>
 </head>
 <body>
 
 <div class="page">
+
+  <!-- Header Controls -->
+  <div class="header-controls">
+    <a href="./index.html" class="btn-icon" title="返回主页">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <button id="theme-toggle" class="btn-icon" title="切换主题">
+      <i class="fa-solid fa-circle-half-stroke"></i>
+    </button>
+  </div>
 
   <!-- Header -->
   <div class="header">
@@ -1041,6 +1136,21 @@ function runSim() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closePicker();
 });
+
+// ─── Theme Toggle Script ──────────────────────────────────────────────────────
+(function() {
+  const btn = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+  const saved = localStorage.getItem('dp-theme') || 'light';
+  html.setAttribute('data-theme', saved);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('dp-theme', next);
+    });
+  }
+})();
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 refreshUI();
